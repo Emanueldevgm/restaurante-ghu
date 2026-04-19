@@ -1,0 +1,343 @@
+import { Request, Response, NextFunction } from 'express';
+import { query } from '../config/database';
+import {
+    Mesa,
+    Reserva,
+    CreateReservaDTO,
+    ApiResponse,
+} from '../types';
+import {
+    NotFoundError,
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+} from '../middleware/error.middleware';
+import { v4 as uuidv4 } from 'uuid';
+
+export class ReservationController {
+    // Criar nova reserva
+    static async createReservation(
+        req: Request<{}, {}, CreateReservaDTO>,
+        res: Response<ApiResponse>,
+        next: NextFunction
+    ): Promise<void> {
+        try {
+            const userId = req.user?.userId;
+            const {
+                mesa_id,
+                nome_cliente,
+                telefone_cliente,
+                email_cliente,
+                quantidade_pessoas,
+                data_reserva,
+                hora_reserva,
+                ocasiao_especial,
+                observacoes,
+            } = req.body;
+
+            // Validações
+            if (!nome_cliente || !telefone_cliente || !quantidade_pessoas || !data_reserva || !hora_reserva) {
+                throw new BadRequestError('Nome, telefone, quantidade de pessoas, data e hora são obrigatórios');
+            }
+
+            // Verificar se a data é futura
+            const dataReserva = new Date(data_reserva + ' ' + hora_reserva);
+            if (dataReserva < new Date()) {
+                throw new BadRequestError('A data e hora da reserva devem ser futuras');
+            }
+
+            // Se mesa específica foi solicitada
+            if (mesa_id) {
+                // Verificar se mesa existe e está ativa
+                const [mesa] = await query<Mesa[]>(
+                    'SELECT * FROM mesas WHERE id = ? AND ativa = TRUE',
+                    [mesa_id]
+                );
+
+                if (!mesa) {
+                    throw new NotFoundError('Mesa não encontrada ou inativa');
+                }
+
+                // Verificar se mesa já está reservada no mesmo horário
+                const conflitos = await query<Reserva[]>(
+                    `SELECT id FROM reservas 
+           WHERE mesa_id = ? 
+           AND data_reserva = ? 
+           AND status IN ('confirmada', 'em_andamento')
+           AND TIME(hora_reserva) BETWEEN 
+             TIME_FORMAT(SUBTIME(?, '02:00:00'), '%H:%i:%s') AND 
+             TIME_FORMAT(ADDTIME(?, '02:00:00'), '%H:%i:%s')`,
+                    [mesa_id, data_reserva, hora_reserva, hora_reserva]
+                );
+
+                if (conflitos.length > 0) {
+                    throw new ConflictError('Mesa já reservada neste horário');
+                }
+
+                // Verificar capacidade
+                if (quantidade_pessoas > mesa.capacidade) {
+                    throw new BadRequestError(
+                        `Mesa só comporta ${mesa.capacidade} pessoa(s)`
+                    );
+                }
+            }
+
+            // Criar reserva
+            const reservaId = uuidv4();
+            await query(
+                `INSERT INTO reservas (
+          id, usuario_id, mesa_id, nome_cliente, telefone_cliente,
+          email_cliente, quantidade_pessoas, data_reserva, hora_reserva,
+          status, ocasiao_especial, observacoes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', ?, ?)`,
+                [
+                    reservaId,
+                    userId || null,
+                    mesa_id || null,
+                    nome_cliente,
+                    telefone_cliente,
+                    email_cliente || null,
+                    quantidade_pessoas,
+                    data_reserva,
+                    hora_reserva,
+                    ocasiao_especial || null,
+                    observacoes || null,
+                ]
+            );
+
+            res.status(201).json({
+                success: true,
+                message: 'Reserva criada com sucesso',
+                data: { id: reservaId },
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // Listar reservas do usuário
+    static async getMyReservations(
+        req: Request,
+        res: Response<ApiResponse<Reserva[]>>,
+        next: NextFunction
+    ): Promise<void> {
+        try {
+            const userId = req.user?.userId;
+            const { status, data_inicial, data_final } = req.query;
+
+            let sql = `
+        SELECT r.*, m.numero as mesa_numero, m.capacidade as mesa_capacidade
+        FROM reservas r
+        LEFT JOIN mesas m ON r.mesa_id = m.id
+        WHERE r.usuario_id = ?
+      `;
+            const params: any[] = [userId];
+
+            if (status) {
+                sql += ' AND r.status = ?';
+                params.push(status);
+            }
+
+            if (data_inicial) {
+                sql += ' AND r.data_reserva >= ?';
+                params.push(data_inicial);
+            }
+
+            if (data_final) {
+                sql += ' AND r.data_reserva <= ?';
+                params.push(data_final);
+            }
+
+            sql += ' ORDER BY r.data_reserva DESC, r.hora_reserva DESC';
+
+            const reservations = await query<Reserva[]>(sql, params);
+
+            res.json({
+                success: true,
+                data: reservations,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // Cancelar reserva
+    static async cancelReservation(
+        req: Request,
+        res: Response<ApiResponse>,
+        next: NextFunction
+    ): Promise<void> {
+        try {
+            const { id } = req.params;
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            // Buscar reserva
+            const [reserva] = await query<Reserva[]>(
+                'SELECT * FROM reservas WHERE id = ?',
+                [id]
+            );
+
+            if (!reserva) {
+                throw new NotFoundError('Reserva');
+            }
+
+            // Verificar permissão
+            if (
+                userRole !== 'administrador' &&
+                userRole !== 'gerente' &&
+                reserva.usuario_id !== userId
+            ) {
+                throw new ForbiddenError('Você não tem permissão para cancelar esta reserva');
+            }
+
+            // Verificar se pode ser cancelada
+            if (['finalizada', 'cancelada'].includes(reserva.status)) {
+                throw new BadRequestError('Reserva já finalizada ou cancelada');
+            }
+
+            await query(
+                'UPDATE reservas SET status = "cancelada", updated_at = NOW() WHERE id = ?',
+                [id]
+            );
+
+            res.json({
+                success: true,
+                message: 'Reserva cancelada com sucesso',
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // Listar todas as reservas (Admin)
+    static async getAllReservations(
+        req: Request,
+        res: Response<ApiResponse<Reserva[]>>,
+        next: NextFunction
+    ): Promise<void> {
+        try {
+            const { status, data, mesa_id, page = 1, limit = 50 } = req.query;
+
+            let sql = `
+        SELECT r.*, 
+               m.numero as mesa_numero,
+               m.capacidade as mesa_capacidade,
+               u.nome_completo as usuario_nome
+        FROM reservas r
+        LEFT JOIN mesas m ON r.mesa_id = m.id
+        LEFT JOIN usuarios u ON r.usuario_id = u.id
+        WHERE 1=1
+      `;
+            const params: any[] = [];
+
+            if (status) {
+                sql += ' AND r.status = ?';
+                params.push(status);
+            }
+
+            if (data) {
+                sql += ' AND r.data_reserva = ?';
+                params.push(data);
+            } else {
+                // Por padrão, mostrar apenas reservas futuras e de hoje
+                sql += ' AND r.data_reserva >= CURDATE()';
+            }
+
+            if (mesa_id) {
+                sql += ' AND r.mesa_id = ?';
+                params.push(mesa_id);
+            }
+
+            sql += ' ORDER BY r.data_reserva ASC, r.hora_reserva ASC';
+
+            const offset = (Number(page) - 1) * Number(limit);
+            sql += ' LIMIT ? OFFSET ?';
+            params.push(Number(limit), offset);
+
+            const reservations = await query<Reserva[]>(sql, params);
+
+            res.json({
+                success: true,
+                data: reservations,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // Confirmar reserva (Admin)
+    static async confirmReservation(
+        req: Request,
+        res: Response<ApiResponse>,
+        next: NextFunction
+    ): Promise<void> {
+        try {
+            const { id } = req.params;
+
+            await query(
+                `UPDATE reservas 
+         SET status = 'confirmada', confirmada_em = NOW(), updated_at = NOW() 
+         WHERE id = ?`,
+                [id]
+            );
+
+            res.json({
+                success: true,
+                message: 'Reserva confirmada com sucesso',
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // Check-in (Admin)
+    static async checkIn(
+        req: Request,
+        res: Response<ApiResponse>,
+        next: NextFunction
+    ): Promise<void> {
+        try {
+            const { id } = req.params;
+
+            await query(
+                `UPDATE reservas 
+         SET status = 'em_andamento', check_in_em = NOW(), updated_at = NOW() 
+         WHERE id = ?`,
+                [id]
+            );
+
+            res.json({
+                success: true,
+                message: 'Check-in realizado com sucesso',
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // Check-out (Admin)
+    static async checkOut(
+        req: Request,
+        res: Response<ApiResponse>,
+        next: NextFunction
+    ): Promise<void> {
+        try {
+            const { id } = req.params;
+
+            await query(
+                `UPDATE reservas 
+         SET status = 'finalizada', check_out_em = NOW(), updated_at = NOW() 
+         WHERE id = ?`,
+                [id]
+            );
+
+            res.json({
+                success: true,
+                message: 'Check-out realizado com sucesso',
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+}
