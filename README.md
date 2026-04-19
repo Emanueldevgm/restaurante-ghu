@@ -147,4 +147,4 @@ npm run build
 
 ## Licença
 
-Projeto MIT.
+Feito por Eng. Emanuel Eminência
