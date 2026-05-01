@@ -161,12 +161,20 @@ export function AdminMenu() {
         return;
       }
 
+      const preco = parseFloat(formData.preco_kz);
+      if (isNaN(preco) || preco <= 0) {
+        toast.error('Preço deve ser um número válido e positivo');
+        return;
+      }
+
       const data = {
         categoria_id: formData.categoria_id,
         nome: formData.nome,
-        descricao: formData.descricao || undefined,
-        preco_kz: parseFloat(formData.preco_kz),
-        preco_promocional_kz: formData.preco_promocional_kz ? parseFloat(formData.preco_promocional_kz) : undefined,
+        descricao: formData.descricao?.trim() || undefined,
+        preco_kz: preco,
+        preco_promocional_kz: formData.preco_promocional_kz
+          ? parseFloat(formData.preco_promocional_kz)
+          : undefined,
         tempo_preparo: formData.tempo_preparo ? parseInt(formData.tempo_preparo) : undefined,
         calorias: formData.calorias ? parseInt(formData.calorias) : undefined,
         vegetariano: formData.vegetariano,
@@ -175,14 +183,14 @@ export function AdminMenu() {
         picante: formData.picante,
         destaque: formData.destaque,
         prato_do_dia: formData.prato_do_dia,
-        imagem: formData.imagem || undefined,
+        imagem: formData.imagem?.trim() || undefined,
       };
 
       if (editingItem) {
-        await api.put(`/admin/menu/items/${editingItem.id}`, data);
+        await api.put(`/menu/admin/items/${editingItem.id}`, data);
         toast.success('Item atualizado com sucesso');
       } else {
-        await api.post('/admin/menu/items', data);
+        await api.post('/menu/admin/items', data);
         toast.success('Item criado com sucesso');
       }
 
@@ -200,7 +208,7 @@ export function AdminMenu() {
     if (!window.confirm('Tem certeza que deseja deletar este item?')) return;
 
     try {
-      await api.delete(`/admin/menu/items/${id}`);
+      await api.delete(`/menu/admin/items/${id}`);
       toast.success('Item deletado com sucesso');
       loadData();
     } catch (error: unknown) {
@@ -213,7 +221,7 @@ export function AdminMenu() {
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
-      await api.patch(`/admin/menu/items/${id}/status`, { status: newStatus });
+      await api.patch(`/menu/admin/items/${id}/status`, { status: newStatus });
       toast.success('Status atualizado com sucesso');
       loadData();
     } catch (error: unknown) {
@@ -224,9 +232,10 @@ export function AdminMenu() {
     }
   };
 
-  const filteredItems = items.filter(item => {
+  const filteredItems = items.filter((item) => {
     const matchCategory = !selectedCategory || item.categoria_id === selectedCategory;
-    const matchSearch = !searchTerm || 
+    const matchSearch =
+      !searchTerm ||
       item.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.descricao?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchCategory && matchSearch;
@@ -279,8 +288,10 @@ export function AdminMenu() {
                   onChange={(e) => setSelectedCategory(e.target.value)}
                 >
                   <option value="">Todas</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.nome}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -302,7 +313,7 @@ export function AdminMenu() {
             </CardContent>
           </Card>
         ) : (
-          filteredItems.map(item => (
+          filteredItems.map((item) => (
             <Card key={item.id} className="hover:shadow-lg transition-shadow">
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-4">
@@ -310,7 +321,7 @@ export function AdminMenu() {
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-semibold text-lg">{item.nome}</h3>
                       <Badge variant="outline">
-                        {categories.find(c => c.id === item.categoria_id)?.nome}
+                        {categories.find((c) => c.id === item.categoria_id)?.nome}
                       </Badge>
                       <Badge className={statusColors[item.status]}>
                         <span className="flex items-center gap-1">
@@ -321,41 +332,59 @@ export function AdminMenu() {
                     </div>
 
                     {item.descricao && (
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {item.descricao}
-                      </p>
+                      <p className="text-sm text-muted-foreground mb-3">{item.descricao}</p>
                     )}
 
                     <div className="flex gap-4 flex-wrap text-sm mb-3">
                       <span className="font-semibold text-primary">
-                        {item.preco_kz.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+                        {item.preco_kz.toLocaleString('pt-AO', {
+                          style: 'currency',
+                          currency: 'AOA',
+                        })}
                       </span>
                       {item.preco_promocional_kz && (
                         <span className="line-through text-muted-foreground">
-                          {item.preco_promocional_kz.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+                          {item.preco_promocional_kz.toLocaleString('pt-AO', {
+                            style: 'currency',
+                            currency: 'AOA',
+                          })}
                         </span>
                       )}
-                      {item.tempo_preparo && (
-                        <span>⏱️ {item.tempo_preparo} min</span>
-                      )}
-                      {item.calorias && (
-                        <span>🔥 {item.calorias} kcal</span>
-                      )}
+                      {item.tempo_preparo && <span>⏱️ {item.tempo_preparo} min</span>}
+                      {item.calorias && <span>🔥 {item.calorias} kcal</span>}
                     </div>
 
                     {(item.vegetariano || item.vegano || item.sem_gluten || item.picante) && (
                       <div className="flex gap-2 flex-wrap mb-3">
-                        {item.vegetariano && <Badge variant="secondary" className="text-xs">🥗 Vegetariano</Badge>}
-                        {item.vegano && <Badge variant="secondary" className="text-xs">🌿 Vegano</Badge>}
-                        {item.sem_gluten && <Badge variant="secondary" className="text-xs">🌾 Sem Glúten</Badge>}
-                        {item.picante && <Badge variant="secondary" className="text-xs">🌶️ Picante</Badge>}
+                        {item.vegetariano && (
+                          <Badge variant="secondary" className="text-xs">
+                            🥗 Vegetariano
+                          </Badge>
+                        )}
+                        {item.vegano && (
+                          <Badge variant="secondary" className="text-xs">
+                            🌿 Vegano
+                          </Badge>
+                        )}
+                        {item.sem_gluten && (
+                          <Badge variant="secondary" className="text-xs">
+                            🌾 Sem Glúten
+                          </Badge>
+                        )}
+                        {item.picante && (
+                          <Badge variant="secondary" className="text-xs">
+                            🌶️ Picante
+                          </Badge>
+                        )}
                       </div>
                     )}
 
                     {(item.destaque || item.prato_do_dia) && (
                       <div className="flex gap-2 flex-wrap">
                         {item.destaque && <Badge className="bg-amber-600">⭐ Destaque</Badge>}
-                        {item.prato_do_dia && <Badge className="bg-purple-600">🎯 Prato do Dia</Badge>}
+                        {item.prato_do_dia && (
+                          <Badge className="bg-purple-600">🎯 Prato do Dia</Badge>
+                        )}
                       </div>
                     )}
                   </div>
@@ -404,12 +433,8 @@ export function AdminMenu() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-96 overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingItem ? 'Editar Item' : 'Novo Item do Cardápio'}
-            </DialogTitle>
-            <DialogDescription>
-              Preencha os detalhes do item
-            </DialogDescription>
+            <DialogTitle>{editingItem ? 'Editar Item' : 'Novo Item do Cardápio'}</DialogTitle>
+            <DialogDescription>Preencha os detalhes do item</DialogDescription>
           </DialogHeader>
 
           <div className="grid grid-cols-2 gap-4 py-4">
@@ -422,8 +447,10 @@ export function AdminMenu() {
                 onChange={(e) => setFormData({ ...formData, categoria_id: e.target.value })}
               >
                 <option value="">Selecione uma categoria</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.nome}
+                  </option>
                 ))}
               </select>
             </div>
@@ -448,6 +475,30 @@ export function AdminMenu() {
                 onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
                 placeholder="Descrição do prato..."
               />
+            </div>
+
+            <div className="col-span-2">
+              <Label htmlFor="imagem">URL da Imagem</Label>
+              <Input
+                id="imagem"
+                type="url"
+                value={formData.imagem}
+                onChange={(e) => setFormData({ ...formData, imagem: e.target.value })}
+                placeholder="https://exemplo.com/imagem.jpg"
+              />
+              {formData.imagem && (
+                <div className="mt-2">
+                  <img
+                    src={formData.imagem}
+                    alt="Preview"
+                    className="w-32 h-32 object-cover rounded-md"
+                    onError={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      img.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
             </div>
 
             <div>
@@ -561,9 +612,7 @@ export function AdminMenu() {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSaveItem}>
-              {editingItem ? 'Atualizar' : 'Criar'} Item
-            </Button>
+            <Button onClick={handleSaveItem}>{editingItem ? 'Atualizar' : 'Criar'} Item</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

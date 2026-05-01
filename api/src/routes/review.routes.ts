@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { ReviewController } from '../controllers/review.controller';
-import { auth } from '../middleware/auth.middleware';
-import { adminOnly } from '../middleware/admin.middleware';
-import { asyncHandler } from '../utils/asyncHandler';
+import { authMiddleware as auth } from '../middleware/auth.middleware';
+import { adminMiddleware as adminOnly } from '../middleware/admin.middleware';
+import { asyncHandler } from '../middleware/validation.middleware';
 
 const router = Router();
 

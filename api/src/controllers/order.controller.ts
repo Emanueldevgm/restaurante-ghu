@@ -5,6 +5,7 @@ import {
     ItemPedido,
     CreatePedidoDTO,
     ApiResponse,
+    TipoPedido,
 } from '../types';
 import {
     NotFoundError,
@@ -15,14 +16,26 @@ import { v4 as uuidv4 } from 'uuid';
 import { PoolConnection } from 'mysql2/promise';
 
 export class OrderController {
-    // Criar novo pedido
+    private static mapOrderTipoToDb(tipo: string) {
+        return tipo === 'delivery' ? 'entrega' : tipo;
+    }
+
+    private static mapOrderTipoFromDb(tipo: string): TipoPedido {
+        return tipo === 'entrega' ? 'delivery' : (tipo as TipoPedido);
+    }
+
+    private static normalizeTipoFilter(tipo?: string) {
+        if (!tipo) return tipo;
+        return tipo === 'delivery' ? 'entrega' : tipo;
+    }
+
     static async createOrder(
         req: Request<{}, {}, CreatePedidoDTO>,
         res: Response<ApiResponse>,
         next: NextFunction
     ): Promise<void> {
         try {
-            const userId = req.user?.userId;
+            const userId = (req as any).user?.userId;
             const {
                 tipo,
                 endereco_id,
@@ -33,22 +46,19 @@ export class OrderController {
                 cupom_codigo,
             } = req.body;
 
-            // Validações
+            const dbTipo = OrderController.mapOrderTipoToDb(tipo);
+
             if (!tipo || !itens || itens.length === 0) {
                 throw new BadRequestError('Tipo e itens são obrigatórios');
             }
-
             if (tipo === 'delivery' && !endereco_id) {
                 throw new BadRequestError('Endereço é obrigatório para delivery');
             }
-
             if (tipo === 'mesa' && !mesa_id) {
                 throw new BadRequestError('Mesa é obrigatória para pedidos no local');
             }
 
-            // Usar transação para garantir consistência
             const result = await transaction(async (conn: PoolConnection) => {
-                // Buscar itens do cardápio e calcular subtotal
                 let subtotal_kz = 0;
                 const itensValidados = [];
 
@@ -57,7 +67,6 @@ export class OrderController {
                         'SELECT * FROM itens_cardapio WHERE id = ? AND status = "disponivel"',
                         [item.item_cardapio_id]
                     );
-
                     if (!menuItem || menuItem.length === 0) {
                         throw new NotFoundError(`Item ${item.item_cardapio_id}`);
                     }
@@ -65,7 +74,6 @@ export class OrderController {
                     const itemData = menuItem[0];
                     const preco = itemData.preco_promocional_kz || itemData.preco_kz;
                     const subtotal_item = preco * item.quantidade;
-
                     subtotal_kz += subtotal_item;
 
                     itensValidados.push({
@@ -76,40 +84,32 @@ export class OrderController {
                     });
                 }
 
-                // Calcular taxa de entrega
                 let taxa_entrega_kz = 0;
                 let distancia_km = null;
 
                 if (tipo === 'delivery' && endereco_id) {
-                    // Buscar endereço
                     const [endereco] = await conn.query<any[]>(
                         'SELECT * FROM enderecos_clientes WHERE id = ?',
                         [endereco_id]
                     );
-
                     if (!endereco || endereco.length === 0) {
                         throw new NotFoundError('Endereço');
                     }
-
                     const enderecoData = endereco[0];
-
-                    // Buscar taxa de entrega da zona
                     const [zona] = await conn.query<any[]>(
                         `SELECT taxa_entrega_kz FROM zonas_entrega 
-             WHERE provincia = ? 
-             AND ativa = TRUE
-             AND (
-               JSON_CONTAINS(municipios, JSON_QUOTE(?))
-               OR JSON_LENGTH(municipios) = 0
-             )
-             LIMIT 1`,
+                         WHERE provincia = ? 
+                         AND ativa = TRUE
+                         AND (
+                           JSON_CONTAINS(municipios, JSON_QUOTE(?))
+                           OR JSON_LENGTH(municipios) = 0
+                         )
+                         LIMIT 1`,
                         [enderecoData.provincia, enderecoData.municipio]
                     );
-
                     if (zona && zona.length > 0) {
                         taxa_entrega_kz = zona[0].taxa_entrega_kz;
                     } else {
-                        // Taxa padrão se não encontrar zona
                         const [config] = await conn.query<any[]>(
                             'SELECT taxa_entrega_base_kz FROM configuracoes_restaurante LIMIT 1'
                         );
@@ -117,35 +117,28 @@ export class OrderController {
                     }
                 }
 
-                // Aplicar cupom se fornecido
                 let desconto_kz = 0;
                 let cupom_id = null;
 
                 if (cupom_codigo) {
                     const [cupom] = await conn.query<any[]>(
                         `SELECT * FROM cupons 
-             WHERE codigo = ? 
-             AND status = 'ativo'
-             AND data_inicio <= CURDATE()
-             AND data_fim >= CURDATE()
-             AND (quantidade_disponivel IS NULL OR quantidade_disponivel > quantidade_usada)`,
+                         WHERE codigo = ? 
+                         AND status = 'ativo'
+                         AND data_inicio <= CURDATE()
+                         AND data_fim >= CURDATE()
+                         AND (quantidade_disponivel IS NULL OR quantidade_disponivel > quantidade_usada)`,
                         [cupom_codigo]
                     );
-
                     if (cupom && cupom.length > 0) {
                         const cupomData = cupom[0];
-
-                        // Verificar valor mínimo
                         if (subtotal_kz >= cupomData.valor_minimo_pedido_kz) {
                             cupom_id = cupomData.id;
-
                             if (cupomData.tipo === 'percentual') {
                                 desconto_kz = (subtotal_kz * cupomData.valor) / 100;
                             } else {
                                 desconto_kz = cupomData.valor;
                             }
-
-                            // Desconto não pode ser maior que o subtotal
                             if (desconto_kz > subtotal_kz) {
                                 desconto_kz = subtotal_kz;
                             }
@@ -153,11 +146,9 @@ export class OrderController {
                     }
                 }
 
-                // Calcular total
                 const total_kz = subtotal_kz - desconto_kz + taxa_entrega_kz;
-
-                // Criar pedido
                 const pedidoId = uuidv4();
+
                 await conn.query(
                     `INSERT INTO pedidos (
             id, usuario_id, tipo, status, endereco_id, mesa_id,
@@ -168,7 +159,7 @@ export class OrderController {
                     [
                         pedidoId,
                         userId || null,
-                        tipo,
+                        dbTipo,
                         endereco_id || null,
                         mesa_id || null,
                         taxa_entrega_kz,
@@ -179,20 +170,18 @@ export class OrderController {
                         observacoes || null,
                         observacoes_entrega || null,
                         cupom_id,
-                        45, // tempo estimado padrão
+                        45,
                     ]
                 );
 
-                // Adicionar itens do pedido
                 for (const item of itensValidados) {
-                    const itemPedidoId = uuidv4();
                     await conn.query(
                         `INSERT INTO itens_pedido (
               id, pedido_id, item_cardapio_id, nome_item,
               preco_unitario_kz, quantidade, subtotal_kz, observacoes
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                         [
-                            itemPedidoId,
+                            uuidv4(),
                             pedidoId,
                             item.item_cardapio_id,
                             item.nome_item,
@@ -204,7 +193,6 @@ export class OrderController {
                     );
                 }
 
-                // Registrar uso do cupom
                 if (cupom_id) {
                     await conn.query(
                         'INSERT INTO cupons_utilizados (id, cupom_id, pedido_id, usuario_id, valor_desconto_kz) VALUES (?, ?, ?, ?, ?)',
@@ -212,10 +200,9 @@ export class OrderController {
                     );
                 }
 
-                return { pedidoId, numero_pedido: null };
+                return { pedidoId };
             });
 
-            // Buscar número do pedido
             const [pedido] = await query<Pedido[]>(
                 'SELECT numero_pedido FROM pedidos WHERE id = ?',
                 [result.pedidoId]
@@ -234,14 +221,13 @@ export class OrderController {
         }
     }
 
-    // Listar pedidos do usuário
     static async getMyOrders(
         req: Request,
         res: Response<ApiResponse<Pedido[]>>,
         next: NextFunction
     ): Promise<void> {
         try {
-            const userId = req.user?.userId;
+            const userId = (req as any).user?.userId;
             const { status, tipo, page = 1, limit = 20 } = req.query;
 
             let sql = `
@@ -259,31 +245,33 @@ export class OrderController {
                 sql += ' AND p.status = ?';
                 params.push(status);
             }
-
             if (tipo) {
                 sql += ' AND p.tipo = ?';
-                params.push(tipo);
+                params.push(OrderController.normalizeTipoFilter(tipo as string));
             }
 
             sql += ' ORDER BY p.created_at DESC';
 
-            // Paginação
-            const offset = (Number(page) - 1) * Number(limit);
-            sql += ' LIMIT ? OFFSET ?';
-            params.push(Number(limit), offset);
+            const parsedLimit = Math.max(1, parseInt(limit as string, 10) || 20);
+            const parsedOffset = Math.max(0, (parseInt(page as string, 10) - 1) * parsedLimit);
+
+            sql += ` LIMIT ${parsedLimit} OFFSET ${parsedOffset}`;
 
             const orders = await query<Pedido[]>(sql, params);
+            const normalizedOrders = orders.map((order) => ({
+                ...order,
+                tipo: OrderController.mapOrderTipoFromDb(order.tipo) as TipoPedido,
+            }));
 
             res.json({
                 success: true,
-                data: orders,
+                data: normalizedOrders,
             });
         } catch (error) {
             next(error);
         }
     }
 
-    // Obter detalhes de um pedido
     static async getOrderDetails(
         req: Request,
         res: Response<ApiResponse>,
@@ -291,10 +279,9 @@ export class OrderController {
     ): Promise<void> {
         try {
             const { id } = req.params;
-            const userId = req.user?.userId;
-            const userRole = req.user?.role;
+            const userId = (req as any).user?.userId;
+            const userRole = (req as any).user?.role;
 
-            // Buscar pedido
             const [pedido] = await query<any[]>(
                 `SELECT p.*,
                 u.nome_completo as cliente_nome,
@@ -313,7 +300,6 @@ export class OrderController {
                 throw new NotFoundError('Pedido');
             }
 
-            // Verificar permissão
             if (
                 userRole !== 'administrador' &&
                 userRole !== 'gerente' &&
@@ -322,7 +308,6 @@ export class OrderController {
                 throw new ForbiddenError('Você não tem permissão para visualizar este pedido');
             }
 
-            // Buscar itens do pedido
             const itens = await query<ItemPedido[]>(
                 'SELECT * FROM itens_pedido WHERE pedido_id = ?',
                 [id]
@@ -332,6 +317,7 @@ export class OrderController {
                 success: true,
                 data: {
                     ...pedido,
+                    tipo: OrderController.mapOrderTipoFromDb(pedido.tipo),
                     itens,
                 },
             });
@@ -340,7 +326,6 @@ export class OrderController {
         }
     }
 
-    // Atualizar status do pedido (Admin/Cozinha)
     static async updateOrderStatus(
         req: Request,
         res: Response<ApiResponse>,
@@ -364,18 +349,14 @@ export class OrderController {
                 throw new BadRequestError('Status inválido');
             }
 
-            // Atualizar status
             await query(
                 'UPDATE pedidos SET status = ?, updated_at = NOW() WHERE id = ?',
                 [status, id]
             );
 
-            // Se confirmado, registrar timestamp
             if (status === 'confirmado') {
                 await query('UPDATE pedidos SET confirmado_em = NOW() WHERE id = ?', [id]);
             }
-
-            // Se entregue, registrar timestamp
             if (status === 'entregue') {
                 await query('UPDATE pedidos SET finalizado_em = NOW() WHERE id = ?', [id]);
             }
@@ -389,7 +370,6 @@ export class OrderController {
         }
     }
 
-    // Cancelar pedido
     static async cancelOrder(
         req: Request,
         res: Response<ApiResponse>,
@@ -397,10 +377,9 @@ export class OrderController {
     ): Promise<void> {
         try {
             const { id } = req.params;
-            const userId = req.user?.userId;
-            const userRole = req.user?.role;
+            const userId = (req as any).user?.userId;
+            const userRole = (req as any).user?.role;
 
-            // Buscar pedido
             const [pedido] = await query<Pedido[]>(
                 'SELECT * FROM pedidos WHERE id = ?',
                 [id]
@@ -410,7 +389,6 @@ export class OrderController {
                 throw new NotFoundError('Pedido');
             }
 
-            // Verificar permissão
             if (
                 userRole !== 'administrador' &&
                 userRole !== 'gerente' &&
@@ -419,7 +397,6 @@ export class OrderController {
                 throw new ForbiddenError('Você não tem permissão para cancelar este pedido');
             }
 
-            // Verificar se pedido pode ser cancelado
             if (['entregue', 'cancelado'].includes(pedido.status)) {
                 throw new BadRequestError(
                     `Pedido ${pedido.status === 'entregue' ? 'já entregue' : 'já cancelado'}`
@@ -440,7 +417,6 @@ export class OrderController {
         }
     }
 
-    // Listar todos os pedidos (Admin)
     static async getAllOrders(
         req: Request,
         res: Response<ApiResponse<Pedido[]>>,
@@ -465,17 +441,14 @@ export class OrderController {
                 sql += ' AND p.status = ?';
                 params.push(status);
             }
-
             if (tipo) {
                 sql += ' AND p.tipo = ?';
-                params.push(tipo);
+                params.push(OrderController.normalizeTipoFilter(tipo as string));
             }
-
             if (data_inicio) {
                 sql += ' AND DATE(p.created_at) >= ?';
                 params.push(data_inicio);
             }
-
             if (data_fim) {
                 sql += ' AND DATE(p.created_at) <= ?';
                 params.push(data_fim);
@@ -483,15 +456,20 @@ export class OrderController {
 
             sql += ' ORDER BY p.created_at DESC';
 
-            const offset = (Number(page) - 1) * Number(limit);
-            sql += ' LIMIT ? OFFSET ?';
-            params.push(Number(limit), offset);
+            const parsedLimit = Math.max(1, parseInt(limit as string, 10) || 50);
+            const parsedOffset = Math.max(0, (parseInt(page as string, 10) - 1) * parsedLimit);
+
+            sql += ` LIMIT ${parsedLimit} OFFSET ${parsedOffset}`;
 
             const orders = await query<Pedido[]>(sql, params);
+            const normalizedOrders = orders.map((order) => ({
+                ...order,
+                tipo: OrderController.mapOrderTipoFromDb(order.tipo) as TipoPedido,
+            }));
 
             res.json({
                 success: true,
-                data: orders,
+                data: normalizedOrders,
             });
         } catch (error) {
             next(error);

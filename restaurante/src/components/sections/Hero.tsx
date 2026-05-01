@@ -1,111 +1,114 @@
-import React from 'react';
-import { ArrowRight, Star, Clock, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowRight, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+const slides = [
+  {
+    image: '/img/ghu.webp',
+    alt: 'Grande Hotel do Uíge – Fachada principal',
+  },
+  {
+    image: '/img/Captura de ecrã 2026-04-19 181345.png',
+    alt: 'Restaurante e área de lazer',
+  },
+  {
+    image: '/img/Captura de ecrã 2026-04-19 181419.png',
+    alt: 'Gastronomia de excelência',
+  },
+  // fallback
+  {
+    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200',
+    alt: 'Hotel de luxo com piscina',
+  },
+];
+
+const AUTOPLAY_INTERVAL = 5000; // 5 segundos
+
 export function Hero() {
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrent((prev) => (prev + 1) % slides.length);
+    }, AUTOPLAY_INTERVAL);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background Image with Overlay */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: 'url(/img/ghu.webp)',
-        }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary/70 to-secondary/80" />
-      
-      {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 pt-20">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-accent/20 backdrop-blur-sm border border-accent/30 rounded-full px-4 py-2 mb-6 animate-fade-up">
-            <Star className="w-4 h-4 text-accent" fill="currentColor" />
-            <span className="text-sm font-medium text-accent">
-              Eleito Melhor Restaurante de Uíge
-            </span>
-          </div>
+    <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 pb-12 pt-28 sm:pt-32">
+      {/* Carrossel de fundo */}
+      {slides.map((slide, index) => (
+        <div
+          key={index}
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-700 ease-in-out"
+          style={{
+            backgroundImage: `url(${slide.image})`,
+            opacity: index === current ? 1 : 0,
+          }}
+          aria-hidden={index !== current}
+        />
+      ))}
 
-          <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-primary-foreground mb-6 animate-fade-up" style={{ animationDelay: '0.1s' }}>
-            Sabores autênticos com toque contemporâneo
-          </h1>
+      {/* Overlay escuro */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-950/85 via-blue-950/75 to-sky-500/60" />
 
-          <p className="text-lg md:text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto animate-fade-up" style={{ animationDelay: '0.2s' }}>
-            Peças únicas no cardápio, atendimento diferenciado e ambiente pensado para experiências memoráveis.
-          </p>
+      {/* Efeitos de luz suaves (opcional, mas mantidos para profundidade) */}
+      <div className="absolute left-[-10%] top-24 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
+      <div className="absolute bottom-10 right-[-8%] h-80 w-80 rounded-full bg-blue-400/20 blur-3xl" />
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-up" style={{ animationDelay: '0.3s' }}>
-            <Button
-              size="lg"
-              className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-gold group"
-              asChild
-            >
-              <a href="/menu">
-                Ver Cardápio
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </a>
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
-              asChild
-            >
-              <a href="/reservas">
-                Reservar Mesa
-              </a>
-            </Button>
-          </div>
+      {/* Indicadores do slide (discretos, no fundo) */}
+      <div className="absolute bottom-24 left-1/2 z-20 flex -translate-x-1/2 gap-2">
+        {slides.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrent(index)}
+            className={`h-2 rounded-full transition-all duration-300 ${
+              index === current ? 'w-8 bg-white' : 'w-2 bg-white/40'
+            }`}
+            aria-label={`Ir para imagem ${index + 1}`}
+          />
+        ))}
+      </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-16 animate-fade-up" style={{ animationDelay: '0.4s' }}>
-            <div className="bg-primary-foreground/10 backdrop-blur-sm rounded-3xl p-5 border border-primary-foreground/20 shadow-sm">
-              <Clock className="w-6 h-6 text-accent mx-auto mb-3" />
-              <p className="text-sm text-primary-foreground/80">Horário</p>
-              <p className="font-semibold text-primary-foreground">12h - 23h (Todos os dias)</p>
-            </div>
-            <div className="bg-primary-foreground/10 backdrop-blur-sm rounded-3xl p-5 border border-primary-foreground/20 shadow-sm">
-              <MapPin className="w-6 h-6 text-accent mx-auto mb-3" />
-              <p className="text-sm text-primary-foreground/80">Localização</p>
-              <p className="font-semibold text-primary-foreground">Av. da República, Uíge</p>
-            </div>
-            <div className="bg-primary-foreground/10 backdrop-blur-sm rounded-3xl p-5 border border-primary-foreground/20 shadow-sm">
-              <Star className="w-6 h-6 text-accent mx-auto mb-3" fill="currentColor" />
-              <p className="text-sm text-primary-foreground/80">Satisfação</p>
-              <p className="font-semibold text-primary-foreground">4.9 / 5.0 de avaliações reais</p>
-            </div>
-          </div>
+      {/* Conteúdo principal */}
+      <div className="relative z-10 container max-w-3xl text-center">
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-sm animate-fade-up">
+          <Star className="h-4 w-4 text-accent" fill="currentColor" />
+          <span className="text-sm font-medium text-accent">
+            ★★★★★ 4.8 · Hotel &amp; Restaurante Premium
+          </span>
+        </div>
 
-          {/* Image Gallery */}
-          <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-up" style={{ animationDelay: '0.5s' }}>
-            <div className="relative rounded-3xl overflow-hidden shadow-elegant transform transition hover:scale-105">
-              <img
-                src="/img/ghu.webp"
-                alt="Grande Hotel do Uíge - Vista principal"
-                className="w-full h-64 md:h-72 object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-            </div>
-            <div className="relative rounded-3xl overflow-hidden shadow-elegant transform transition hover:scale-105">
-              <img
-                src="/img/Captura de ecrã 2026-04-19 181345.png"
-                alt="Ambiente do restaurante"
-                className="w-full h-64 md:h-72 object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-            </div>
-            <div className="relative rounded-3xl overflow-hidden shadow-elegant transform transition hover:scale-105">
-              <img
-                src="/img/Captura de ecrã 2026-04-19 181419.png"
-                alt="Pratos especiais do restaurante"
-                className="w-full h-64 md:h-72 object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-            </div>
-          </div>
+        <h1 className="font-display mb-6 text-4xl font-bold leading-tight text-white animate-fade-up md:text-6xl lg:text-7xl">
+          Grande Hotel do Uíge
+        </h1>
+
+        <p className="mx-auto mb-8 max-w-xl text-lg text-blue-50/82 animate-fade-up md:text-xl">
+          Conforto, gastronomia de excelência e hospitalidade angolana num só lugar.
+        </p>
+
+        <div className="flex flex-col items-center gap-4 animate-fade-up sm:flex-row sm:justify-center">
+          <Button size="lg" className="group bg-white text-primary hover:bg-blue-50" asChild>
+            <a href="/menu">
+              Ver Cardápio
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </a>
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            className="border-white/25 bg-white/10 text-white hover:bg-white/15"
+            asChild
+          >
+            <a href="/reservas">Reservar Mesa</a>
+          </Button>
         </div>
       </div>
 
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-        <div className="w-6 h-10 border-2 border-primary-foreground/30 rounded-full flex justify-center pt-2">
-          <div className="w-1 h-3 bg-primary-foreground/50 rounded-full" />
+      {/* Indicador de scroll */}
+      <div className="absolute bottom-8 left-1/2 z-20 -translate-x-1/2 animate-bounce">
+        <div className="flex h-10 w-6 justify-center rounded-full border-2 border-white/30 pt-2">
+          <div className="h-3 w-1 rounded-full bg-white/60" />
         </div>
       </div>
     </section>

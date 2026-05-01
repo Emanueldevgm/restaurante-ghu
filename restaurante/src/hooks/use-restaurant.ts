@@ -306,16 +306,234 @@ export const useDailyStats = () => {
     };
 };
 
+// ============ ANALYTICS HOOKS ============
+
+export const useMonthlyRevenue = () => {
+    const { data: orders = [] } = useAllOrders();
+
+    // Agrupar por mês
+    const monthlyData = orders.reduce((acc: any, order: any) => {
+        if (order.status === 'cancelado') return acc;
+
+        const date = new Date(order.created_at);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+        if (!acc[monthKey]) {
+            acc[monthKey] = { month: monthKey, receita: 0, pedidos: 0 };
+        }
+
+        acc[monthKey].receita += order.total || 0;
+        acc[monthKey].pedidos += 1;
+
+        return acc;
+    }, {});
+
+    const data = Object.values(monthlyData).sort((a: any, b: any) => a.month.localeCompare(b.month));
+
+    return {
+        data,
+        isLoading: false,
+    };
+};
+
+export const useWeeklyRevenue = () => {
+    const { data: orders = [] } = useAllOrders();
+
+    // Agrupar por dia da semana
+    const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const weeklyData = orders.reduce((acc: any, order: any) => {
+        if (order.status === 'cancelado') return acc;
+
+        const date = new Date(order.created_at);
+        const dayIndex = date.getDay();
+        const dayName = weekDays[dayIndex];
+
+        if (!acc[dayName]) {
+            acc[dayName] = { dia: dayName, receita: 0, pedidos: 0 };
+        }
+
+        acc[dayName].receita += order.total || 0;
+        acc[dayName].pedidos += 1;
+
+        return acc;
+    }, {});
+
+    const data = weekDays.map(day => weeklyData[day] || { dia: day, receita: 0, pedidos: 0 });
+
+    return {
+        data,
+        isLoading: false,
+    };
+};
+
+export const useHourlyOrders = () => {
+    const { data: orders = [] } = useAllOrders();
+
+    // Agrupar por hora
+    const hourlyData = orders.reduce((acc: any, order: any) => {
+        if (order.status === 'cancelado') return acc;
+
+        const date = new Date(order.created_at);
+        const hour = date.getHours();
+        const hourKey = `${hour}h`;
+
+        if (!acc[hourKey]) {
+            acc[hourKey] = { hora: hourKey, pedidos: 0, receita: 0 };
+        }
+
+        acc[hourKey].pedidos += 1;
+        acc[hourKey].receita += order.total || 0;
+
+        return acc;
+    }, {});
+
+    const data = Array.from({ length: 24 }, (_, i) => {
+        const hourKey = `${i}h`;
+        return hourlyData[hourKey] || { hora: hourKey, pedidos: 0, receita: 0 };
+    });
+
+    return {
+        data,
+        isLoading: false,
+    };
+};
+
+export const useTopProducts = () => {
+    const { data: orders = [] } = useAllOrders();
+    const { data: menuItems = [] } = useMenuItems();
+
+    // Contar vendas por produto
+    const productSales = orders.reduce((acc: any, order: any) => {
+        if (order.status === 'cancelado' || !order.itens) return acc;
+
+        order.itens.forEach((item: any) => {
+            const productId = item.id_produto;
+            if (!acc[productId]) {
+                acc[productId] = { id: productId, vendas: 0, receita: 0 };
+            }
+            acc[productId].vendas += item.quantidade || 1;
+            acc[productId].receita += (item.preco_unitario || 0) * (item.quantidade || 1);
+        });
+
+        return acc;
+    }, {});
+
+    // Combinar com dados do menu
+    const topProducts = Object.values(productSales)
+        .map((sale: any) => {
+            const menuItem = menuItems.find((item: any) => item.id === sale.id);
+            return {
+                nome: menuItem?.nome || `Produto ${sale.id}`,
+                vendas: sale.vendas,
+                receita: sale.receita,
+            };
+        })
+        .sort((a: any, b: any) => b.vendas - a.vendas)
+        .slice(0, 5);
+
+    return {
+        data: topProducts,
+        isLoading: false,
+    };
+};
+
+export const useOrderCategories = () => {
+    const { data: orders = [] } = useAllOrders();
+    const { data: menuItems = [] } = useMenuItems();
+
+    // Agrupar por categoria
+    const categoryData = orders.reduce((acc: any, order: any) => {
+        if (order.status === 'cancelado' || !order.itens) return acc;
+
+        order.itens.forEach((item: any) => {
+            const menuItem = menuItems.find((m: any) => m.id === item.id_produto);
+            const category = menuItem?.categoria || 'Outros';
+
+            if (!acc[category]) {
+                acc[category] = { name: category, value: 0 };
+            }
+            acc[category].value += item.quantidade || 1;
+        });
+
+        return acc;
+    }, {});
+
+    const data = Object.values(categoryData);
+
+    return {
+        data,
+        isLoading: false,
+    };
+};
+
+export const useTableOccupancy = () => {
+    const { data: reservations = [] } = useAllReservations();
+
+    // Simular ocupação por hora (dados mockados por enquanto)
+    const occupancyData = Array.from({ length: 24 }, (_, i) => ({
+        hora: `${i}h`,
+        ocupacao: Math.floor(Math.random() * 40) + 30, // 30-70% ocupação
+    }));
+
+    return {
+        data: occupancyData,
+        isLoading: false,
+    };
+};
+
+export const usePerformanceMetrics = () => {
+    const { data: orders = [] } = useAllOrders();
+
+    // Calcular métricas de performance
+    const completedOrders = orders.filter((o: any) => o.status === 'entregue');
+    const cancelledOrders = orders.filter((o: any) => o.status === 'cancelado');
+
+    const avgPrepTime = completedOrders.length > 0
+        ? completedOrders.reduce((sum: number, order: any) => {
+            // Simular tempo de preparo baseado no tipo de pedido
+            const baseTime = order.tipo === 'delivery' ? 25 : 15;
+            return sum + (baseTime + Math.random() * 10);
+        }, 0) / completedOrders.length
+        : 0;
+
+    const cancellationRate = orders.length > 0 ? (cancelledOrders.length / orders.length) * 100 : 0;
+    const deliveryEfficiency = 94 + Math.random() * 4; // 94-98%
+
+    return {
+        data: {
+            avgPrepTime: Math.round(avgPrepTime),
+            cancellationRate: Math.round(cancellationRate * 10) / 10,
+            deliveryEfficiency: Math.round(deliveryEfficiency * 10) / 10,
+        },
+        isLoading: false,
+    };
+};
+
+export const useCustomerSatisfaction = () => {
+    // Dados mockados de satisfação (até ter sistema de reviews)
+    const satisfactionData = [
+        { subject: 'Qualidade', A: 4.8, fullMark: 5 },
+        { subject: 'Serviço', A: 4.6, fullMark: 5 },
+        { subject: 'Ambiente', A: 4.7, fullMark: 5 },
+        { subject: 'Preço', A: 4.5, fullMark: 5 },
+        { subject: 'Rapidez', A: 4.4, fullMark: 5 },
+        { subject: 'Recomendação', A: 4.9, fullMark: 5 },
+    ];
+
+    return {
+        data: satisfactionData,
+        isLoading: false,
+    };
+};
+
 // ============ USERS HOOKS ============
 
 export const useUsers = () => {
     return useQuery({
         queryKey: ['users'],
-        queryFn: async () => {
-            const response = await authApi.listUsers();
-            return response.data || [];
-        },
-        staleTime: 1 * 60 * 1000,
+        queryFn: authApi.listUsers,
+        staleTime: 30000,
+        select: (data) => data.data,
     });
 };
 
@@ -328,8 +546,9 @@ export const useCreateUser = () => {
             queryClient.invalidateQueries({ queryKey: ['users'] });
             toast.success('Usuário criado com sucesso!');
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onError: (error: any) => {
-            toast.error(error.message || 'Erro ao criar usuário');
+            toast.error(error.response?.data?.message || 'Erro ao criar usuário');
         },
     });
 };

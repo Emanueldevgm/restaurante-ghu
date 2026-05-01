@@ -5,8 +5,8 @@ import { adminMiddleware } from '../middleware/admin.middleware';
 import { asyncHandler } from '../middleware/validation.middleware';
 import { validateBody } from '../middleware/validation.middleware';
 import {
-    CreateItemCardapioDTOSchema,
-    UpdateItemCardapioDTOSchema,
+  CreateItemCardapioDTOSchema,
+  UpdateItemCardapioDTOSchema,
 } from '../schemas/validation.schemas';
 
 const router = Router();
@@ -17,75 +17,66 @@ const router = Router();
  * GET /api/menu/categories
  * Listar categorias ativas
  */
-router.get(
-    '/categories',
-    asyncHandler(MenuController.getCategories)
-);
+router.get('/categories', asyncHandler(MenuController.getCategories));
 
 /**
  * GET /api/menu/items
  * Listar items do cardápio com filtros
  */
-router.get(
-    '/items',
-    asyncHandler(MenuController.getMenuItems)
-);
+router.get('/items', asyncHandler(MenuController.getMenuItems));
 
 /**
  * GET /api/menu/items/:id
  * Obter detalhes de um item específico
  */
-router.get(
-    '/items/:id',
-    asyncHandler(MenuController.getMenuItem)
-);
+router.get('/items/:id', asyncHandler(MenuController.getMenuItem));
 
 // ============ ROTAS PROTEGIDAS (ADMIN) ============
 
 /**
- * POST /api/menu/items
+ * POST /api/admin/menu/items
  * Criar novo item no cardápio (admin)
  */
 router.post(
-    '/items',
-    authMiddleware,
-    adminMiddleware,
-    validateBody(CreateItemCardapioDTOSchema),
-    asyncHandler(MenuController.createMenuItem)
+  '/admin/items',
+  authMiddleware,
+  adminMiddleware,
+  validateBody(CreateItemCardapioDTOSchema),
+  asyncHandler(MenuController.createMenuItem),
 );
 
 /**
- * PUT /api/menu/items/:id
+ * PUT /api/admin/menu/items/:id
  * Atualizar item (admin)
  */
 router.put(
-    '/items/:id',
-    authMiddleware,
-    adminMiddleware,
-    validateBody(UpdateItemCardapioDTOSchema),
-    asyncHandler(MenuController.updateMenuItem)
+  '/admin/items/:id',
+  authMiddleware,
+  adminMiddleware,
+  validateBody(UpdateItemCardapioDTOSchema),
+  asyncHandler(MenuController.updateMenuItem),
 );
 
 /**
- * DELETE /api/menu/items/:id
+ * DELETE /api/admin/menu/items/:id
  * Deletar item (admin)
  */
 router.delete(
-    '/items/:id',
-    authMiddleware,
-    adminMiddleware,
-    asyncHandler(MenuController.deleteMenuItem)
+  '/admin/items/:id',
+  authMiddleware,
+  adminMiddleware,
+  asyncHandler(MenuController.deleteMenuItem),
 );
 
 /**
- * PATCH /api/menu/items/:id/status
+ * PATCH /api/admin/menu/items/:id/status
  * Alternar status de disponibilidade (admin)
  */
 router.patch(
-    '/items/:id/status',
-    authMiddleware,
-    adminMiddleware,
-    asyncHandler(MenuController.toggleStatus)
+  '/admin/items/:id/status',
+  authMiddleware,
+  adminMiddleware,
+  asyncHandler(MenuController.toggleStatus),
 );
 
 export default router;

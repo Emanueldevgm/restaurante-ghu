@@ -16,6 +16,8 @@ import {
 } from '../middleware/error.middleware';
 import { v4 as uuidv4 } from 'uuid';
 
+type UserStatus = 'ativo' | 'inativo' | 'bloqueado';
+
 export class AuthController {
     // Registro de novo usuário
     static async register(
@@ -34,7 +36,6 @@ export class AuthController {
                 genero,
             } = req.body;
 
-            // Validações
             if (!nome_completo || !telefone || !senha) {
                 throw new BadRequestError('Nome completo, telefone e senha são obrigatórios');
             }
@@ -43,7 +44,6 @@ export class AuthController {
                 throw new BadRequestError('A senha deve ter pelo menos 6 caracteres');
             }
 
-            // Verificar se usuário já existe
             if (email) {
                 const existingEmail = await query<Usuario[]>(
                     'SELECT id FROM usuarios WHERE email = ?',
@@ -62,10 +62,8 @@ export class AuthController {
                 throw new ConflictError('Este telefone já está cadastrado');
             }
 
-            // Hash da senha
             const senha_hash = await hashPassword(senha);
 
-            // Criar usuário
             const userId = uuidv4();
             await query(
                 `INSERT INTO usuarios (
@@ -84,13 +82,11 @@ export class AuthController {
                 ]
             );
 
-            // Buscar usuário criado
             const [user] = await query<Usuario[]>(
                 'SELECT id, nome_completo, email, telefone, role FROM usuarios WHERE id = ?',
                 [userId]
             );
 
-            // Gerar token
             const token = generateToken({
                 userId: user.id,
                 email: user.email || '',
@@ -129,7 +125,6 @@ export class AuthController {
                 throw new BadRequestError('Email ou telefone e senha são obrigatórios');
             }
 
-            // Buscar usuário
             let user: Usuario | null = null;
             if (email) {
                 const users = await query<Usuario[]>(
@@ -150,19 +145,16 @@ export class AuthController {
                 throw new UnauthorizedError('Credenciais inválidas');
             }
 
-            // Verificar senha
             const isPasswordValid = await comparePassword(senha, user.senha_hash);
             if (!isPasswordValid) {
                 console.log(`[AUTH] Senha inválida para usuário: ${email || telefone}`);
                 throw new UnauthorizedError('Credenciais inválidas');
             }
 
-            // Atualizar último acesso
             await query('UPDATE usuarios SET ultimo_acesso = NOW() WHERE id = ?', [
                 user.id,
             ]);
 
-            // Gerar token
             const token = generateToken({
                 userId: user.id,
                 email: user.email || '',
@@ -197,9 +189,9 @@ export class AuthController {
         next: NextFunction
     ): Promise<void> {
         try {
-            const userId = req.user?.userId;
+            const userId = (req as any).user?.userId;
 
-            const [user] = await query<Usuario[]>(
+            const [user] = await query<any[]>(
                 `SELECT id, nome_completo, email, telefone, telefone_alternativo, 
          bi, nif, role, status, foto_perfil, data_nascimento, genero, 
          created_at, ultimo_acesso
@@ -227,7 +219,7 @@ export class AuthController {
         next: NextFunction
     ): Promise<void> {
         try {
-            const userId = req.user?.userId;
+            const userId = (req as any).user?.userId;
             const {
                 nome_completo,
                 email,
@@ -238,7 +230,6 @@ export class AuthController {
                 foto_perfil,
             } = req.body;
 
-            // Verificar se email já existe (se estiver mudando)
             if (email) {
                 const existing = await query<Usuario[]>(
                     'SELECT id FROM usuarios WHERE email = ? AND id != ?',
@@ -288,7 +279,7 @@ export class AuthController {
         next: NextFunction
     ): Promise<void> {
         try {
-            const userId = req.user?.userId;
+            const userId = (req as any).user?.userId;
             const { senha_atual, senha_nova } = req.body;
 
             if (!senha_atual || !senha_nova) {
@@ -299,7 +290,6 @@ export class AuthController {
                 throw new BadRequestError('A nova senha deve ter pelo menos 6 caracteres');
             }
 
-            // Verificar senha atual
             const [user] = await query<Usuario[]>(
                 'SELECT senha_hash FROM usuarios WHERE id = ?',
                 [userId]
@@ -310,7 +300,6 @@ export class AuthController {
                 throw new UnauthorizedError('Senha atual incorreta');
             }
 
-            // Atualizar senha
             const senha_hash = await hashPassword(senha_nova);
             await query('UPDATE usuarios SET senha_hash = ?, updated_at = NOW() WHERE id = ?', [
                 senha_hash,
@@ -333,7 +322,7 @@ export class AuthController {
         next: NextFunction
     ): Promise<void> {
         try {
-            const userRole = req.user?.role;
+            const userRole = (req as any).user?.role;
             if (userRole !== 'administrador') {
                 throw new UnauthorizedError('Acesso negado. Apenas administradores podem listar usuários.');
             }
@@ -361,7 +350,7 @@ export class AuthController {
         next: NextFunction
     ): Promise<void> {
         try {
-            const userRole = req.user?.role;
+            const userRole = (req as any).user?.role;
             if (userRole !== 'administrador') {
                 throw new UnauthorizedError('Acesso negado. Apenas administradores podem criar usuários.');
             }
@@ -380,7 +369,6 @@ export class AuthController {
                 status,
             } = req.body;
 
-            // Validações
             if (!nome_completo || !telefone || !senha) {
                 throw new BadRequestError('Nome completo, telefone e senha são obrigatórios');
             }
@@ -389,7 +377,6 @@ export class AuthController {
                 throw new BadRequestError('A senha deve ter pelo menos 6 caracteres');
             }
 
-            // Verificar se usuário já existe
             if (email) {
                 const existingEmail = await query<Usuario[]>(
                     'SELECT id FROM usuarios WHERE email = ?',
@@ -428,10 +415,8 @@ export class AuthController {
                 }
             }
 
-            // Hash da senha
             const senha_hash = await hashPassword(senha);
 
-            // Criar usuário
             const userId = uuidv4();
             await query(
                 `INSERT INTO usuarios (
@@ -454,8 +439,7 @@ export class AuthController {
                 ]
             );
 
-            // Buscar usuário criado
-            const [user] = await query<Usuario[]>(
+            const [user] = await query<any[]>(
                 `SELECT id, nome_completo, email, telefone, telefone_alternativo,
          bi, nif, role, status, data_nascimento, genero, created_at
          FROM usuarios WHERE id = ?`,
@@ -471,13 +455,13 @@ export class AuthController {
                         nome_completo: user.nome_completo,
                         email: user.email,
                         telefone: user.telefone,
-                        telefone_alternativo: user.telefone_alternativo,
-                        bi: user.bi,
-                        nif: user.nif,
+                        telefone_alternativo: user.telefone_alternativo || null,
+                        bi: user.bi || null,
+                        nif: user.nif || null,
                         role: user.role,
                         status: user.status,
-                        data_nascimento: user.data_nascimento,
-                        genero: user.genero,
+                        data_nascimento: user.data_nascimento || null,
+                        genero: user.genero || null,
                         created_at: user.created_at,
                     },
                 },
@@ -489,12 +473,12 @@ export class AuthController {
 
     // Alterar status do usuário (apenas admin)
     static async updateUserStatus(
-        req: Request<{ id: string }, {}, { status: UserStatus }>,
+        req: Request<{ id: string }, {}, { status: string }>,
         res: Response,
         next: NextFunction
     ): Promise<void> {
         try {
-            const userRole = req.user?.role;
+            const userRole = (req as any).user?.role;
             if (userRole !== 'administrador') {
                 throw new UnauthorizedError('Acesso negado. Apenas administradores podem alterar status de usuários.');
             }
@@ -506,7 +490,6 @@ export class AuthController {
                 throw new BadRequestError('Status inválido');
             }
 
-            // Verificar se usuário existe
             const [existingUser] = await query<Usuario[]>(
                 'SELECT id FROM usuarios WHERE id = ?',
                 [id]
@@ -516,7 +499,6 @@ export class AuthController {
                 throw new BadRequestError('Usuário não encontrado');
             }
 
-            // Atualizar status
             await query(
                 'UPDATE usuarios SET status = ?, updated_at = NOW() WHERE id = ?',
                 [status, id]

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ShoppingCart, User } from 'lucide-react';
+import { Menu, X, ShoppingCart, User, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
 import { useCart } from '@/contexts/CartContext';
@@ -20,7 +20,7 @@ export function Navbar() {
   const location = useLocation();
 
   const navLinks = [
-    { href: '/', label: 'Início' },
+    { href: '/', label: 'Inicio' },
     { href: '/menu', label: 'Menu' },
     { href: '/reservas', label: 'Reservas' },
     { href: '/sobre', label: 'Sobre' },
@@ -30,10 +30,10 @@ export function Navbar() {
     if (href.includes('#')) {
       return location.pathname === '/' && location.hash === href.replace('/', '');
     }
+
     return location.pathname === href;
   };
 
-  // Função para determinar a rota do painel baseada no role
   const getDashboardRoute = (role: string) => {
     switch (role) {
       case 'admin':
@@ -53,22 +53,25 @@ export function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border shadow-elegant">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16 md:h-20">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group transform transition-transform hover:scale-105">
+    <nav className="fixed left-0 right-0 top-0 z-50 border-b border-white/60 bg-white/80 backdrop-blur-xl">
+      <div className="container px-4">
+        <div className="flex h-[4.5rem] items-center justify-between gap-3 py-3 md:h-20">
+          <Link to="/" className="flex items-center gap-3 transition-transform hover:scale-[1.01]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent shadow-accent">
+              <span className="font-display text-sm font-bold text-white">GHU</span>
+            </div>
             <Logo size="md" variant="full" />
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden items-center gap-2 rounded-full border border-border/80 bg-white/90 p-1 shadow-sm lg:flex">
             {navLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                className={`font-medium transition-colors hover:text-primary ${
-                  isActive(link.href) ? 'text-primary' : 'text-muted-foreground'
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                  isActive(link.href)
+                    ? 'bg-secondary text-primary shadow-sm'
+                    : 'text-muted-foreground hover:bg-secondary/80 hover:text-primary'
                 }`}
               >
                 {link.label}
@@ -76,29 +79,26 @@ export function Navbar() {
             ))}
           </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-2 md:gap-4">
-            {/* Cart Button */}
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
-              className="relative"
+              className="relative border-white bg-white/90"
               onClick={() => setIsCartOpen(true)}
             >
-              <ShoppingCart className="w-5 h-5" />
+              <ShoppingCart className="h-5 w-5" />
               {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent text-accent-foreground text-xs font-bold rounded-full flex items-center justify-center animate-scale-in">
+                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground animate-scale-in">
                   {totalItems}
                 </span>
               )}
             </Button>
 
-            {/* User Menu */}
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                  <Button variant="outline" size="icon" className="rounded-full border-white bg-white/90">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent">
                       <span className="text-sm font-medium text-primary-foreground">
                         {user?.name.charAt(0).toUpperCase()}
                       </span>
@@ -123,36 +123,35 @@ export function Navbar() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button asChild className="hidden md:flex bg-primary hover:bg-primary/90">
+              <Button asChild className="hidden md:flex">
                 <Link to="/auth">
-                  <User className="w-4 h-4 mr-2" />
+                  <User className="mr-2 h-4 w-4" />
                   Entrar
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
             )}
 
-            {/* Mobile Menu Button */}
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
-              className="md:hidden"
+              className="border-white bg-white/90 lg:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
-              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border animate-fade-in">
+          <div className="animate-fade-in border-t border-border py-4 lg:hidden">
             <div className="flex flex-col gap-4">
               {navLinks.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
-                  className={`font-medium py-2 transition-colors hover:text-primary ${
-                    isActive(link.href) ? 'text-primary' : 'text-muted-foreground'
+                  className={`rounded-2xl px-4 py-3 text-sm font-semibold transition-colors ${
+                    isActive(link.href) ? 'bg-secondary text-primary' : 'text-muted-foreground hover:bg-secondary'
                   }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
@@ -160,9 +159,9 @@ export function Navbar() {
                 </a>
               ))}
               {!isAuthenticated && (
-                <Button asChild className="w-full bg-primary hover:bg-primary/90">
+                <Button asChild className="w-full">
                   <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
-                    <User className="w-4 h-4 mr-2" />
+                    <User className="mr-2 h-4 w-4" />
                     Entrar / Criar Conta
                   </Link>
                 </Button>

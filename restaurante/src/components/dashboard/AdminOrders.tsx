@@ -134,7 +134,7 @@ export function AdminOrders({ onViewDetails }: AdminOrdersProps) {
                     )}
                   </TableCell>
                   <TableCell className="capitalize">{order.tipo}</TableCell>
-                  <TableCell>{order.total_kz.toFixed(2)} Kz</TableCell>
+                  <TableCell>{Number(order.total_kz).toFixed(2)} Kz</TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(order.status) as 'default' | 'secondary' | 'destructive' | 'outline'}>
                       {order.status.replace('_', ' ')}
