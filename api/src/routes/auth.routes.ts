@@ -9,6 +9,8 @@ import {
     AdminCreateUserDTOSchema,
     ChangePasswordDTOSchema,
     UpdateProfileDTOSchema,
+    ForgotPasswordDTOSchema,
+    ResetPasswordDTOSchema,
 } from '../schemas/validation.schemas';
 
 const router = Router();
@@ -33,6 +35,18 @@ router.post(
     '/login',
     validateBody(LoginDTOSchema),
     asyncHandler(AuthController.login)
+);
+
+router.post(
+    '/forgot-password',
+    validateBody(ForgotPasswordDTOSchema),
+    asyncHandler(AuthController.forgotPassword)
+);
+
+router.post(
+    '/reset-password',
+    validateBody(ResetPasswordDTOSchema),
+    asyncHandler(AuthController.resetPassword)
 );
 
 // ============ ROTAS PROTEGIDAS ============

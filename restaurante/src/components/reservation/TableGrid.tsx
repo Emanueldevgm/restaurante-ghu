@@ -40,10 +40,14 @@ export function TableGrid() {
 
   const getTableStyle = (status: string) => {
     switch (status) {
-      case 'disponivel': return 'bg-success hover:bg-success/80 hover:scale-105 cursor-pointer shadow-success/30';
-      case 'ocupada': return 'bg-destructive/80 cursor-not-allowed';
-      case 'reservada': return 'bg-warning/80 cursor-not-allowed';
-      default: return 'bg-muted';
+      case 'disponivel':
+        return 'bg-blue-500 hover:bg-blue-500/80 hover:scale-105 cursor-pointer shadow-blue-500/30';
+      case 'ocupada':
+        return 'bg-red-500/80 cursor-not-allowed';
+      case 'reservada':
+        return 'bg-yellow-500/80 cursor-not-allowed';
+      default:
+        return 'bg-muted';
     }
   };
 
@@ -53,7 +57,9 @@ export function TableGrid() {
         <div className="container mx-auto px-4">
           <Skeleton className="h-10 w-40 mx-auto mb-8" />
           <div className="grid grid-cols-4 gap-4 max-w-2xl mx-auto">
-            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="aspect-square rounded-2xl" />)}
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="aspect-square rounded-2xl" />
+            ))}
           </div>
         </div>
       </section>
@@ -64,7 +70,9 @@ export function TableGrid() {
     <section className="py-20 bg-gradient-to-b from-background to-secondary/10">
       <div className="container mx-auto px-4">
         <div className="text-center mb-14">
-          <span className="text-sm font-bold text-accent uppercase tracking-widest">Reserve sua Mesa</span>
+          <span className="text-sm font-bold text-accent uppercase tracking-widest">
+            Reserve sua Mesa
+          </span>
           <h2 className="font-display text-4xl md:text-5xl font-bold mt-4 mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Mapa de Mesas
           </h2>
@@ -73,14 +81,26 @@ export function TableGrid() {
           </p>
         </div>
 
+        {/* Legenda com novas cores */}
         <div className="flex justify-center gap-8 mb-10">
-          <div className="flex items-center gap-2"><div className="w-5 h-5 rounded bg-success shadow-lg shadow-success/30" /><span>Disponível</span></div>
-          <div className="flex items-center gap-2"><div className="w-5 h-5 rounded bg-destructive/80" /><span>Ocupada</span></div>
-          <div className="flex items-center gap-2"><div className="w-5 h-5 rounded bg-warning/80" /><span>Reservada</span></div>
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded bg-blue-500 shadow-lg shadow-blue-500/30" />
+            <span>Disponível</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded bg-red-500/80" />
+            <span>Ocupada</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded bg-yellow-500/80" />
+            <span>Reservada</span>
+          </div>
         </div>
 
         <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl">
-          <div className="text-center mb-8 text-xs font-medium text-muted-foreground uppercase">Entrada</div>
+          <div className="text-center mb-8 text-xs font-medium text-muted-foreground uppercase">
+            Entrada
+          </div>
           <div className="grid grid-cols-4 gap-4">
             {tablesWithStatus.map((table) => (
               <button
@@ -90,11 +110,16 @@ export function TableGrid() {
                 className={`aspect-square rounded-2xl flex flex-col items-center justify-center text-white font-bold transition-all duration-300 ${getTableStyle(table.status)}`}
               >
                 <span className="text-2xl">{table.numero}</span>
-                <div className="flex items-center gap-1 text-xs opacity-90"><Users className="w-3 h-3" />{table.capacidade}</div>
+                <div className="flex items-center gap-1 text-xs opacity-90">
+                  <Users className="w-3 h-3" />
+                  {table.capacidade}
+                </div>
               </button>
             ))}
           </div>
-          <div className="text-center mt-8 text-xs font-medium text-muted-foreground uppercase">Cozinha</div>
+          <div className="text-center mt-8 text-xs font-medium text-muted-foreground uppercase">
+            Cozinha
+          </div>
         </div>
 
         {selectedTable && (

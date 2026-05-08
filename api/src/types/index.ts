@@ -271,13 +271,20 @@ export interface AuthResponse {
     success: boolean;
     message: string;
     data?: {
-        token: string;
+        token?: string;
         user: {
             id: string;
             nome_completo: string;
             email: string | null;
             telefone: string;
+            telefone_alternativo?: string | null;
+            bi?: string | null;
+            nif?: string | null;
             role: UserRole;
+            status?: UserStatus;
+            data_nascimento?: string | null;
+            genero?: Genero | null;
+            created_at?: string;
         };
     };
 }

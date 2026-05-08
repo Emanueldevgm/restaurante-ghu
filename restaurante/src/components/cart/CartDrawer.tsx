@@ -187,7 +187,8 @@ export function CartDrawer() {
 
             <div className="space-y-2">
               <Label className="text-sm">Tipo de pedido</Label>
-              <div className="grid grid-cols-3 gap-1.5">
+              {/* Alterado para grid-cols-2 – botões organizados sem coluna vazia */}
+              <div className="grid grid-cols-2 gap-1.5">
                 <Button
                   variant={orderType === 'retirada' ? 'default' : 'outline'}
                   onClick={() => setOrderType('retirada')}
@@ -195,14 +196,6 @@ export function CartDrawer() {
                 >
                   <Store className="mb-1 h-4 w-4" />
                   Retirada
-                </Button>
-                <Button
-                  variant={orderType === 'delivery' ? 'default' : 'outline'}
-                  onClick={() => setOrderType('delivery')}
-                  className="h-auto flex-col py-2 text-xs hover:scale-105 active:scale-95 transition-all duration-200"
-                >
-                  <Truck className="mb-1 h-4 w-4" />
-                  Delivery
                 </Button>
                 <Button
                   variant={orderType === 'mesa' ? 'default' : 'outline'}

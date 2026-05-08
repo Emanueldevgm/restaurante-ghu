@@ -35,7 +35,16 @@ const EnvSchema = z.object({
     EMAIL_USER: z.string().optional(),
     EMAIL_PASSWORD: z.string().optional(),
     EMAIL_FROM: z.string().optional(),
-    
+
+    // SMTP
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z.coerce.number().optional(),
+    SMTP_SECURE: z.string().optional(),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASS: z.string().optional(),
+    SMTP_FROM: z.string().optional(),
+    SMTP_FROM_NAME: z.string().optional(),
+
     // SMS
     SMS_PROVIDER: z.string().optional(),
     SMS_API_KEY: z.string().optional(),

@@ -103,6 +103,15 @@ export const UpdateProfileDTOSchema = z.object({
   genero: z.enum(['masculino', 'feminino', 'outro']).optional(),
 });
 
+export const ForgotPasswordDTOSchema = z.object({
+  email: z.string().email('Email inválido'),
+});
+
+export const ResetPasswordDTOSchema = z.object({
+  token: z.string().min(1, 'Token é obrigatório'),
+  newPassword: z.string().min(6, 'Nova senha deve ter pelo menos 6 caracteres'),
+});
+
 // ============ MENU SCHEMAS ============
 
 const CreateItemCardapioBaseSchema = z.object({
@@ -264,3 +273,5 @@ export type CreateItemCardapioDTO = z.infer<typeof CreateItemCardapioDTOSchema>;
 export type UpdateItemCardapioDTO = z.infer<typeof UpdateItemCardapioDTOSchema>;
 export type CreatePedidoDTO = z.infer<typeof CreatePedidoDTOSchema>;
 export type CreateReservacionDTO = z.infer<typeof CreateReservacionDTOSchema>;
+export type ForgotPasswordDTO = z.infer<typeof ForgotPasswordDTOSchema>;
+export type ResetPasswordDTO = z.infer<typeof ResetPasswordDTOSchema>;

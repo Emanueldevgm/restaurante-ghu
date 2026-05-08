@@ -67,7 +67,7 @@ export class ReviewController {
         'INSERT INTO avaliacoes (id, pedido_id, usuario_id, nota, comentario) VALUES (?, ?, ?, ?, ?)',
         [reviewId, pedido_id, usuario_id, nota, comentario || null]
       );
-      res.status(201).json({ success: true, message: 'Avaliação criada com sucesso', data: { id: reviewId } });
+      return res.status(201).json({ success: true, message: 'Avaliação criada com sucesso', data: { id: reviewId } });
     } catch (error: any) {
       Logger.error('Erro ao criar avaliação:', error);
       return res.status(500).json({ success: false, message: 'Erro ao criar avaliação' });
@@ -82,7 +82,7 @@ export class ReviewController {
         return res.status(400).json({ success: false, message: 'Resposta não pode estar vazia' });
       }
       await query('UPDATE avaliacoes SET resposta_restaurante = ? WHERE id = ?', [resposta_restaurante, id]);
-      res.json({ success: true, message: 'Resposta registrada com sucesso' });
+      return res.json({ success: true, message: 'Resposta registrada com sucesso' });
     } catch (error: any) {
       Logger.error('Erro ao responder avaliação:', error);
       return res.status(500).json({ success: false, message: 'Erro ao responder avaliação' });

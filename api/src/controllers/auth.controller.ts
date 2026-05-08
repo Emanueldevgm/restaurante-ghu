@@ -1,7 +1,9 @@
+import bcrypt from 'bcryptjs';
 import { Request, Response, NextFunction } from 'express';
 import { query } from '../config/database';
 import { hashPassword, comparePassword } from '../utils/password.util';
 import { generateToken } from '../utils/jwt.util';
+import { sendEmail } from '../utils/email.util';
 import {
     Usuario,
     RegisterDTO,
@@ -15,8 +17,6 @@ import {
     ConflictError,
 } from '../middleware/error.middleware';
 import { v4 as uuidv4 } from 'uuid';
-
-type UserStatus = 'ativo' | 'inativo' | 'bloqueado';
 
 export class AuthController {
     // Registro de novo usuário
@@ -266,6 +266,93 @@ export class AuthController {
             res.json({
                 success: true,
                 message: 'Perfil atualizado com sucesso',
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async forgotPassword(
+        req: Request<{}, {}, { email: string }>,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> {
+        try {
+            const { email } = req.body;
+            if (!email) {
+                throw new BadRequestError('Email é obrigatório.');
+            }
+
+            const users = await query<Usuario[]>(
+                'SELECT id FROM usuarios WHERE email = ?',
+                [email]
+            );
+
+            if (users.length === 0) {
+                res.json({
+                    success: true,
+                    message: 'Se o email estiver cadastrado, receberá um link de recuperação.',
+                });
+                return;
+            }
+
+            const token = uuidv4();
+            const expiresAt = new Date(Date.now() + 3600000); // 1 hora
+
+            await query(
+                'INSERT INTO password_resets (id, email, token, expires_at, used) VALUES (?, ?, ?, ?, 0)',
+                [uuidv4(), email, token, expiresAt]
+            );
+
+            const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}`;
+
+            await sendEmail(
+                email,
+                'Redefinição de Senha - Restaurante GHU',
+                `<p>Olá,</p>
+       <p>Recebemos uma solicitação para redefinir sua senha. Clique no link abaixo para continuar:</p>
+       <p><a href="${resetLink}" style="display:inline-block;padding:10px 20px;background:#2563EB;color:#fff;border-radius:5px;text-decoration:none;">Redefinir Senha</a></p>
+       <p>Se não foi você, ignore este email. O link expira em 1 hora.</p>`
+            );
+
+            res.json({
+                success: true,
+                message: 'Se o email estiver cadastrado, receberá um link de recuperação.',
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async resetPassword(
+        req: Request<{}, {}, { token: string; newPassword: string }>,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> {
+        try {
+            const { token, newPassword } = req.body;
+            if (!token || !newPassword) {
+                throw new BadRequestError('Token e nova senha são obrigatórios.');
+            }
+
+            const resets = await query<any[]>(
+                'SELECT * FROM password_resets WHERE token = ? AND expires_at > NOW() AND used = 0',
+                [token]
+            );
+
+            if (resets.length === 0) {
+                throw new BadRequestError('Token inválido ou expirado.');
+            }
+
+            const reset = resets[0];
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+            await query('UPDATE usuarios SET senha_hash = ? WHERE email = ?', [hashedPassword, reset.email]);
+            await query('UPDATE password_resets SET used = 1 WHERE id = ?', [reset.id]);
+
+            res.json({
+                success: true,
+                message: 'Senha atualizada com sucesso.',
             });
         } catch (error) {
             next(error);

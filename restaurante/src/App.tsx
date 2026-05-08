@@ -13,6 +13,8 @@ import Index from "./pages/Index";
 import About from "./pages/About";
 import Reservas from "./pages/Reservas";
 import Auth from "./pages/Auth";
+import { ForgotPassword } from "./pages/ForgotPassword";
+import { ResetPassword } from "./pages/ResetPassword";
 import Admin from "./pages/Admin";
 import Cliente from "./pages/Cliente";
 import Gerente from "./pages/Gerente";
@@ -55,6 +57,8 @@ const App = () => {
                       <Route path="/sobre" element={<About />} />
                       <Route path="/reservas" element={<Reservas />} />
                       <Route path="/auth" element={<Auth />} />
+                      <Route path="/forgot-password" element={<ForgotPassword />} />
+                      <Route path="/reset-password" element={<ResetPassword />} />
                       <Route path="/admin" element={<Admin />} />
                       <Route path="/gerente" element={<Gerente />} />
                       <Route path="/garcom" element={<Garcom />} />

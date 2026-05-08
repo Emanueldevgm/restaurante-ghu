@@ -5,8 +5,8 @@ import { ZodSchema, ZodError } from 'zod';
  * Wrapper para capturar erros em rotas assincronas
  * Impede que erros não capturados quebrem a aplicação
  */
-export const asyncHandler = (
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<void>,
+export const asyncHandler = <T extends (...args: any[]) => Promise<any>>(
+  fn: T,
 ) => {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);

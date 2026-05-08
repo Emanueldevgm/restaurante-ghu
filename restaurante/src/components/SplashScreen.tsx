@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { Logo } from '@/components/Logo';
 
@@ -38,29 +39,13 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
       </svg>
 
       <div className="relative z-10 flex flex-col items-center gap-10">
-        {/* Estrela desenhando-se com traço contínuo */}
-        <svg width="120" height="120" viewBox="0 0 120 120" className="animate-draw-star">
-          <defs>
-            <linearGradient id="starGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" className="star-color-stop-1" stopColor="#3B82F6" />
-              <stop offset="100%" className="star-color-stop-2" stopColor="#1E3A8A" />
-            </linearGradient>
-          </defs>
-          <path
-            d="M60,15 L72,45 L105,45 L80,65 L88,95 L60,78 L32,95 L40,65 L15,45 L48,45 Z"
-            fill="none"
-            stroke="url(#starGradient)"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeDasharray="320"
-            strokeDashoffset="320"
-            className="star-path"
-          />
-        </svg>
+        {/* Logótipo do restaurante com animação de fade-in */}
+        <div className="animate-fade-in-up">
+          <Logo className="w-32 h-32" />
+        </div>
 
         {/* Texto */}
-        <div className="text-center animate-fade-in-up">
+        <div className="text-center animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
           <h1 className="text-3xl font-display font-bold text-gray-800">
             Restaurante <span className="text-blue-600">GHU</span>
           </h1>
@@ -75,12 +60,8 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         </div>
       </div>
 
-      {/* Estilos das animações */}
+      {/* Estilos das animações (removida a animação da estrela) */}
       <style>{`
-        @keyframes draw-star {
-          0% { stroke-dashoffset: 320; }
-          100% { stroke-dashoffset: 0; }
-        }
         @keyframes fade-in-up {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
@@ -89,11 +70,8 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
           0% { width: 0%; }
           100% { width: 100%; }
         }
-        .star-path {
-          animation: draw-star 2s ease-in-out forwards;
-        }
         .animate-fade-in-up {
-          animation: fade-in-up 1s ease-out 0.5s both;
+          animation: fade-in-up 1s ease-out both;
         }
         .animate-progress {
           animation: progress 2.2s ease-in-out forwards;
