@@ -34,11 +34,10 @@ export function Features() {
             Destaques do Restaurante
           </span>
           <h2 className="font-display mt-4 mb-4 text-3xl font-bold sm:text-4xl">
-            Um layout moderno que valoriza clareza, acoes e conversao.
+            APROVEITE OS NOSSOS SERVIÇOS
           </h2>
           <p className="text-base text-muted-foreground sm:text-lg">
-            A nova direcao visual usa azul, branco, superficies mais leves e componentes
-            com melhor contraste para navegacao, pedidos e reservas.
+            
           </p>
         </div>
 

@@ -23,17 +23,17 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-sm text-blue-100/80">
                 <Phone className="h-4 w-4 text-cyan-300" />
-                (11) 99999-9999
+                (+244) 931441110
               </li>
               <li className="flex items-center gap-2 text-sm text-blue-100/80">
                 <Mail className="h-4 w-4 text-cyan-300" />
-                contato@grandehoteldouige.com.br
+                contato@grandehoteldouige.ao
               </li>
               <li className="flex items-start gap-2 text-sm text-blue-100/80">
                 <MapPin className="mt-0.5 h-4 w-4 text-cyan-300" />
-                Av. Paulista, 1000
+                Rua Dr.Antonio Agostinho Neto
                 <br />
-                Sao Paulo - SP
+                UIGE
               </li>
             </ul>
           </div>

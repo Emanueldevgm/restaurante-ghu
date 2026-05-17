@@ -81,7 +81,7 @@ export function MenuShowcase() {
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
             Navegue pelas categorias e encontre pratos com apresentacao mais clara,
-            destaque visual para promocoes e leitura confortavel em qualquer ecran.
+            
           </p>
         </div>
 

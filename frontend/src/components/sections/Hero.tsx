@@ -4,20 +4,20 @@ import { Button } from '@/components/ui/button';
 
 const slides = [
   {
-    image: '/img/ghu.webp',
+    image: '/img/',
     alt: 'Grande Hotel do Uíge – Fachada principal',
   },
   {
-    image: '/img/Captura de ecrã 2026-04-19 181345.png',
+    image: '/img/',
     alt: 'Restaurante e área de lazer',
   },
   {
-    image: '/img/Captura de ecrã 2026-04-19 181419.png',
+    image: '/img/',
     alt: 'Gastronomia de excelência',
   },
   // fallback
   {
-    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200',
+    image: '/img/GHU.png',
     alt: 'Hotel de luxo com piscina',
   },
 ];
