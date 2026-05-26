@@ -1,65 +1,35 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
-import {
-  Plus,
-  Edit2,
-  Trash2,
-  Search,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  Loader,
-} from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, AlertCircle, CheckCircle, XCircle, Loader, FolderPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import axios from 'axios';
 
 interface MenuItem {
-  id: string;
-  categoria_id: string;
-  nome: string;
-  descricao: string;
-  preco_kz: number;
-  preco_promocional_kz: number | null;
-  tempo_preparo: number | null;
-  calorias: number | null;
-  vegetariano: boolean;
-  vegano: boolean;
-  sem_gluten: boolean;
-  picante: boolean;
-  status: 'disponivel' | 'indisponivel' | 'esgotado';
-  destaque: boolean;
-  prato_do_dia: boolean;
-  imagem: string | null;
-  categoria_nome?: string;
+  id: string; categoria_id: string; nome: string; descricao: string;
+  preco_kz: number; preco_promocional_kz: number | null; tempo_preparo: number | null;
+  calorias: number | null; vegetariano: boolean; vegano: boolean; sem_gluten: boolean;
+  picante: boolean; status: 'disponivel' | 'indisponivel' | 'esgotado';
+  destaque: boolean; prato_do_dia: boolean; imagem: string | null; categoria_nome?: string;
 }
 
 interface Categoria {
-  id: string;
-  nome: string;
-  descricao: string | null;
+  id: string; nome: string; descricao: string | null;
 }
 
-const statusColors = {
+const statusColors: Record<string, string> = {
   disponivel: 'bg-green-100 text-green-800',
   indisponivel: 'bg-red-100 text-red-800',
   esgotado: 'bg-yellow-100 text-yellow-800',
 };
 
-const statusIcons = {
+const statusIcons: Record<string, JSX.Element> = {
   disponivel: <CheckCircle className="w-4 h-4" />,
   indisponivel: <XCircle className="w-4 h-4" />,
   esgotado: <AlertCircle className="w-4 h-4" />,
@@ -72,29 +42,19 @@ export function AdminMenu() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [editingCategory, setEditingCategory] = useState<Categoria | null>(null);
 
-  // Form state
   const [formData, setFormData] = useState({
-    categoria_id: '',
-    nome: '',
-    descricao: '',
-    preco_kz: '',
-    preco_promocional_kz: '',
-    tempo_preparo: '',
-    calorias: '',
-    vegetariano: false,
-    vegano: false,
-    sem_gluten: false,
-    picante: false,
-    destaque: false,
-    prato_do_dia: false,
-    imagem: '',
+    categoria_id: '', nome: '', descricao: '', preco_kz: '', preco_promocional_kz: '',
+    tempo_preparo: '', calorias: '', vegetariano: false, vegano: false, sem_gluten: false,
+    picante: false, destaque: false, prato_do_dia: false, imagem: '',
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const [categoryFormData, setCategoryFormData] = useState({ nome: '', descricao: '' });
+
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     try {
@@ -103,7 +63,6 @@ export function AdminMenu() {
         api.get('/menu/items?limit=1000'),
         api.get('/menu/categories?ativo=true'),
       ]);
-
       setItems(itemsRes.data.data || []);
       setCategories(categoriesRes.data.data || []);
     } catch (error) {
@@ -113,42 +72,23 @@ export function AdminMenu() {
     }
   };
 
+  // ===== ITENS DO CARDÁPIO =====
   const handleOpenDialog = (item?: MenuItem) => {
     if (item) {
       setEditingItem(item);
       setFormData({
-        categoria_id: item.categoria_id,
-        nome: item.nome,
-        descricao: item.descricao || '',
-        preco_kz: item.preco_kz.toString(),
-        preco_promocional_kz: item.preco_promocional_kz?.toString() || '',
-        tempo_preparo: item.tempo_preparo?.toString() || '',
-        calorias: item.calorias?.toString() || '',
-        vegetariano: item.vegetariano,
-        vegano: item.vegano,
-        sem_gluten: item.sem_gluten,
-        picante: item.picante,
-        destaque: item.destaque,
-        prato_do_dia: item.prato_do_dia,
-        imagem: item.imagem || '',
+        categoria_id: item.categoria_id, nome: item.nome, descricao: item.descricao || '',
+        preco_kz: item.preco_kz.toString(), preco_promocional_kz: item.preco_promocional_kz?.toString() || '',
+        tempo_preparo: item.tempo_preparo?.toString() || '', calorias: item.calorias?.toString() || '',
+        vegetariano: item.vegetariano, vegano: item.vegano, sem_gluten: item.sem_gluten,
+        picante: item.picante, destaque: item.destaque, prato_do_dia: item.prato_do_dia, imagem: item.imagem || '',
       });
     } else {
       setEditingItem(null);
       setFormData({
-        categoria_id: '',
-        nome: '',
-        descricao: '',
-        preco_kz: '',
-        preco_promocional_kz: '',
-        tempo_preparo: '',
-        calorias: '',
-        vegetariano: false,
-        vegano: false,
-        sem_gluten: false,
-        picante: false,
-        destaque: false,
-        prato_do_dia: false,
-        imagem: '',
+        categoria_id: '', nome: '', descricao: '', preco_kz: '', preco_promocional_kz: '',
+        tempo_preparo: '', calorias: '', vegetariano: false, vegano: false, sem_gluten: false,
+        picante: false, destaque: false, prato_do_dia: false, imagem: '',
       });
     }
     setIsDialogOpen(true);
@@ -160,84 +100,103 @@ export function AdminMenu() {
         toast.error('Preencha todos os campos obrigatórios');
         return;
       }
-
       const preco = parseFloat(formData.preco_kz);
-      if (isNaN(preco) || preco <= 0) {
-        toast.error('Preço deve ser um número válido e positivo');
-        return;
-      }
+      if (isNaN(preco) || preco <= 0) { toast.error('Preço deve ser um número válido e positivo'); return; }
 
       const data = {
-        categoria_id: formData.categoria_id,
-        nome: formData.nome,
-        descricao: formData.descricao?.trim() || undefined,
-        preco_kz: preco,
-        preco_promocional_kz: formData.preco_promocional_kz
-          ? parseFloat(formData.preco_promocional_kz)
-          : undefined,
+        categoria_id: formData.categoria_id, nome: formData.nome,
+        descricao: formData.descricao?.trim() || undefined, preco_kz: preco,
+        preco_promocional_kz: formData.preco_promocional_kz ? parseFloat(formData.preco_promocional_kz) : undefined,
         tempo_preparo: formData.tempo_preparo ? parseInt(formData.tempo_preparo) : undefined,
         calorias: formData.calorias ? parseInt(formData.calorias) : undefined,
-        vegetariano: formData.vegetariano,
-        vegano: formData.vegano,
-        sem_gluten: formData.sem_gluten,
-        picante: formData.picante,
-        destaque: formData.destaque,
-        prato_do_dia: formData.prato_do_dia,
+        vegetariano: formData.vegetariano, vegano: formData.vegano, sem_gluten: formData.sem_gluten,
+        picante: formData.picante, destaque: formData.destaque, prato_do_dia: formData.prato_do_dia,
         imagem: formData.imagem?.trim() || undefined,
       };
 
       if (editingItem) {
-        await api.put(`/menu/admin/items/${editingItem.id}`, data);
+        await api.put(`/menu/items/${editingItem.id}`, data);
         toast.success('Item atualizado com sucesso');
       } else {
-        await api.post('/menu/admin/items', data);
+        await api.post('/menu/items', data);
         toast.success('Item criado com sucesso');
       }
-
       setIsDialogOpen(false);
       loadData();
     } catch (error: unknown) {
-      const errorMessage = axios.isAxiosError(error)
-        ? error.response?.data?.message || 'Falha ao salvar item'
-        : 'Falha ao salvar item';
+      const errorMessage = axios.isAxiosError(error) ? error.response?.data?.message || 'Falha ao salvar item' : 'Falha ao salvar item';
       toast.error(errorMessage);
     }
   };
 
   const handleDeleteItem = async (id: string) => {
     if (!window.confirm('Tem certeza que deseja deletar este item?')) return;
-
     try {
-      await api.delete(`/menu/admin/items/${id}`);
+      await api.delete(`/menu/items/${id}`);
       toast.success('Item deletado com sucesso');
       loadData();
     } catch (error: unknown) {
-      const errorMessage = axios.isAxiosError(error)
-        ? error.response?.data?.message || 'Falha ao deletar item'
-        : 'Falha ao deletar item';
+      const errorMessage = axios.isAxiosError(error) ? error.response?.data?.message || 'Falha ao deletar item' : 'Falha ao deletar item';
       toast.error(errorMessage);
     }
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
-      await api.patch(`/menu/admin/items/${id}/status`, { status: newStatus });
+      await api.patch(`/menu/items/${id}/status`, { status: newStatus });
       toast.success('Status atualizado com sucesso');
       loadData();
     } catch (error: unknown) {
-      const errorMessage = axios.isAxiosError(error)
-        ? error.response?.data?.message || 'Falha ao atualizar status'
-        : 'Falha ao atualizar status';
+      const errorMessage = axios.isAxiosError(error) ? error.response?.data?.message || 'Falha ao atualizar status' : 'Falha ao atualizar status';
+      toast.error(errorMessage);
+    }
+  };
+
+  // ===== CATEGORIAS =====
+  const handleOpenCategoryDialog = (category?: Categoria) => {
+    if (category) {
+      setEditingCategory(category);
+      setCategoryFormData({ nome: category.nome, descricao: category.descricao || '' });
+    } else {
+      setEditingCategory(null);
+      setCategoryFormData({ nome: '', descricao: '' });
+    }
+    setIsCategoryDialogOpen(true);
+  };
+
+  const handleSaveCategory = async () => {
+    try {
+      if (!categoryFormData.nome.trim()) { toast.error('Nome da categoria é obrigatório'); return; }
+      if (editingCategory) {
+        await api.put(`/menu/categories/${editingCategory.id}`, categoryFormData);
+        toast.success('Categoria atualizada!');
+      } else {
+        await api.post('/menu/categories', categoryFormData);
+        toast.success('Categoria criada!');
+      }
+      setIsCategoryDialogOpen(false);
+      loadData();
+    } catch (error: unknown) {
+      const errorMessage = axios.isAxiosError(error) ? error.response?.data?.message || 'Erro ao salvar categoria' : 'Erro ao salvar categoria';
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja deletar esta categoria? Itens vinculados serão afetados.')) return;
+    try {
+      await api.delete(`/menu/categories/${id}`);
+      toast.success('Categoria removida!');
+      loadData();
+    } catch (error: unknown) {
+      const errorMessage = axios.isAxiosError(error) ? error.response?.data?.message || 'Erro ao remover categoria' : 'Erro ao remover categoria';
       toast.error(errorMessage);
     }
   };
 
   const filteredItems = items.filter((item) => {
     const matchCategory = !selectedCategory || item.categoria_id === selectedCategory;
-    const matchSearch =
-      !searchTerm ||
-      item.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.descricao?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchSearch = !searchTerm || item.nome.toLowerCase().includes(searchTerm.toLowerCase()) || item.descricao?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchCategory && matchSearch;
   });
 
@@ -254,13 +213,33 @@ export function AdminMenu() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Gerenciamento de Cardápio</h2>
-        <Button onClick={() => handleOpenDialog()} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Novo Item
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => handleOpenCategoryDialog()} variant="outline" className="gap-2">
+            <FolderPlus className="w-4 h-4" /> Nova Categoria
+          </Button>
+          <Button onClick={() => handleOpenDialog()} className="gap-2">
+            <Plus className="w-4 h-4" /> Novo Item
+          </Button>
+        </div>
       </div>
 
-      {/* Filters */}
+      {/* Lista de Categorias */}
+      <Card>
+        <CardHeader><CardTitle className="text-lg">Categorias ({categories.length})</CardTitle></CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {categories.map((cat) => (
+              <Badge key={cat.id} variant="outline" className="text-sm py-2 px-4 flex items-center gap-2">
+                {cat.nome}
+                <button onClick={() => handleOpenCategoryDialog(cat)} className="hover:text-primary"><Edit2 className="w-3 h-3" /></button>
+                <button onClick={() => handleDeleteCategory(cat.id)} className="hover:text-red-600"><Trash2 className="w-3 h-3" /></button>
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Filtros */}
       <Card>
         <CardContent className="pt-6">
           <div className="space-y-4">
@@ -269,49 +248,26 @@ export function AdminMenu() {
                 <Label htmlFor="search">Buscar</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    id="search"
-                    placeholder="Nome ou descrição..."
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+                  <Input id="search" placeholder="Nome ou descrição..." className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                 </div>
               </div>
-
               <div className="w-48">
                 <Label htmlFor="category">Categoria</Label>
-                <select
-                  id="category"
-                  className="w-full px-3 py-2 border rounded-md bg-background"
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                >
+                <select id="category" className="w-full px-3 py-2 border rounded-md bg-background" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
                   <option value="">Todas</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.nome}
-                    </option>
-                  ))}
+                  {categories.map((cat) => (<option key={cat.id} value={cat.id}>{cat.nome}</option>))}
                 </select>
               </div>
             </div>
-
-            <div className="text-sm text-muted-foreground">
-              Mostrando {filteredItems.length} de {items.length} itens
-            </div>
+            <div className="text-sm text-muted-foreground">Mostrando {filteredItems.length} de {items.length} itens</div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Items List */}
+      {/* Lista de Itens */}
       <div className="grid gap-4">
         {filteredItems.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="pt-12 pb-12 text-center">
-              <p className="text-muted-foreground">Nenhum item encontrado</p>
-            </CardContent>
-          </Card>
+          <Card className="border-dashed"><CardContent className="pt-12 pb-12 text-center"><p className="text-muted-foreground">Nenhum item encontrado</p></CardContent></Card>
         ) : (
           filteredItems.map((item) => (
             <Card key={item.id} className="hover:shadow-lg transition-shadow">
@@ -320,107 +276,41 @@ export function AdminMenu() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-semibold text-lg">{item.nome}</h3>
-                      <Badge variant="outline">
-                        {categories.find((c) => c.id === item.categoria_id)?.nome}
-                      </Badge>
+                      <Badge variant="outline">{categories.find((c) => c.id === item.categoria_id)?.nome || item.categoria_nome}</Badge>
                       <Badge className={statusColors[item.status]}>
-                        <span className="flex items-center gap-1">
-                          {statusIcons[item.status]}
-                          {item.status}
-                        </span>
+                        <span className="flex items-center gap-1">{statusIcons[item.status]}{item.status}</span>
                       </Badge>
                     </div>
-
-                    {item.descricao && (
-                      <p className="text-sm text-muted-foreground mb-3">{item.descricao}</p>
-                    )}
-
+                    {item.descricao && <p className="text-sm text-muted-foreground mb-3">{item.descricao}</p>}
                     <div className="flex gap-4 flex-wrap text-sm mb-3">
-                      <span className="font-semibold text-primary">
-                        {item.preco_kz.toLocaleString('pt-AO', {
-                          style: 'currency',
-                          currency: 'AOA',
-                        })}
-                      </span>
-                      {item.preco_promocional_kz && (
-                        <span className="line-through text-muted-foreground">
-                          {item.preco_promocional_kz.toLocaleString('pt-AO', {
-                            style: 'currency',
-                            currency: 'AOA',
-                          })}
-                        </span>
-                      )}
+                      <span className="font-semibold text-primary">{item.preco_kz.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</span>
+                      {item.preco_promocional_kz && <span className="line-through text-muted-foreground">{item.preco_promocional_kz.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</span>}
                       {item.tempo_preparo && <span>⏱️ {item.tempo_preparo} min</span>}
                       {item.calorias && <span>🔥 {item.calorias} kcal</span>}
                     </div>
-
                     {(item.vegetariano || item.vegano || item.sem_gluten || item.picante) && (
                       <div className="flex gap-2 flex-wrap mb-3">
-                        {item.vegetariano && (
-                          <Badge variant="secondary" className="text-xs">
-                            🥗 Vegetariano
-                          </Badge>
-                        )}
-                        {item.vegano && (
-                          <Badge variant="secondary" className="text-xs">
-                            🌿 Vegano
-                          </Badge>
-                        )}
-                        {item.sem_gluten && (
-                          <Badge variant="secondary" className="text-xs">
-                            🌾 Sem Glúten
-                          </Badge>
-                        )}
-                        {item.picante && (
-                          <Badge variant="secondary" className="text-xs">
-                            🌶️ Picante
-                          </Badge>
-                        )}
+                        {item.vegetariano && <Badge variant="secondary">🥗 Vegetariano</Badge>}
+                        {item.vegano && <Badge variant="secondary">🌿 Vegano</Badge>}
+                        {item.sem_gluten && <Badge variant="secondary">🌾 Sem Glúten</Badge>}
+                        {item.picante && <Badge variant="secondary">🌶️ Picante</Badge>}
                       </div>
                     )}
-
                     {(item.destaque || item.prato_do_dia) && (
                       <div className="flex gap-2 flex-wrap">
                         {item.destaque && <Badge className="bg-amber-600">⭐ Destaque</Badge>}
-                        {item.prato_do_dia && (
-                          <Badge className="bg-purple-600">🎯 Prato do Dia</Badge>
-                        )}
+                        {item.prato_do_dia && <Badge className="bg-purple-600">🎯 Prato do Dia</Badge>}
                       </div>
                     )}
                   </div>
-
                   <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleOpenDialog(item)}
-                      className="gap-2"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                      Editar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-2 text-red-600 hover:text-red-700"
-                      onClick={() => handleDeleteItem(item.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Deletar
-                    </Button>
-
-                    {/* Status Dropdown */}
-                    <div className="relative">
-                      <select
-                        value={item.status}
-                        onChange={(e) => handleStatusChange(item.id, e.target.value)}
-                        className="px-2 py-1 text-sm border rounded bg-background"
-                      >
-                        <option value="disponivel">Disponível</option>
-                        <option value="indisponivel">Indisponível</option>
-                        <option value="esgotado">Esgotado</option>
-                      </select>
-                    </div>
+                    <Button size="sm" variant="outline" onClick={() => handleOpenDialog(item)}><Edit2 className="w-4 h-4" /></Button>
+                    <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" onClick={() => handleDeleteItem(item.id)}><Trash2 className="w-4 h-4" /></Button>
+                    <select value={item.status} onChange={(e) => handleStatusChange(item.id, e.target.value)} className="px-2 py-1 text-sm border rounded bg-background">
+                      <option value="disponivel">Disponível</option>
+                      <option value="indisponivel">Indisponível</option>
+                      <option value="esgotado">Esgotado</option>
+                    </select>
                   </div>
                 </div>
               </CardContent>
@@ -429,191 +319,45 @@ export function AdminMenu() {
         )}
       </div>
 
-      {/* Dialog para criar/editar */}
+      {/* Dialog de Item */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-96 overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingItem ? 'Editar Item' : 'Novo Item do Cardápio'}</DialogTitle>
-            <DialogDescription>Preencha os detalhes do item</DialogDescription>
-          </DialogHeader>
-
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{editingItem ? 'Editar Item' : 'Novo Item do Cardápio'}</DialogTitle><DialogDescription>Preencha os detalhes do item</DialogDescription></DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="col-span-2">
-              <Label htmlFor="categoria">Categoria *</Label>
-              <select
-                id="categoria"
-                className="w-full px-3 py-2 border rounded-md bg-background"
-                value={formData.categoria_id}
-                onChange={(e) => setFormData({ ...formData, categoria_id: e.target.value })}
-              >
-                <option value="">Selecione uma categoria</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.nome}
-                  </option>
-                ))}
+              <Label>Categoria *</Label>
+              <select className="w-full px-3 py-2 border rounded-md bg-background" value={formData.categoria_id} onChange={(e) => setFormData({ ...formData, categoria_id: e.target.value })}>
+                <option value="">Selecione</option>
+                {categories.map((cat) => (<option key={cat.id} value={cat.id}>{cat.nome}</option>))}
               </select>
             </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="nome">Nome *</Label>
-              <Input
-                id="nome"
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                placeholder="Ex: Anguém à Moderna"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="descricao">Descrição</Label>
-              <textarea
-                id="descricao"
-                className="w-full px-3 py-2 border rounded-md bg-background"
-                rows={2}
-                value={formData.descricao}
-                onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-                placeholder="Descrição do prato..."
-              />
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="imagem">URL da Imagem</Label>
-              <Input
-                id="imagem"
-                type="url"
-                value={formData.imagem}
-                onChange={(e) => setFormData({ ...formData, imagem: e.target.value })}
-                placeholder="https://exemplo.com/imagem.jpg"
-              />
-              {formData.imagem && (
-                <div className="mt-2">
-                  <img
-                    src={formData.imagem}
-                    alt="Preview"
-                    className="w-32 h-32 object-cover rounded-md"
-                    onError={(e) => {
-                      const img = e.target as HTMLImageElement;
-                      img.style.display = 'none';
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="preco">Preço (Kz) *</Label>
-              <Input
-                id="preco"
-                type="number"
-                step="0.01"
-                value={formData.preco_kz}
-                onChange={(e) => setFormData({ ...formData, preco_kz: e.target.value })}
-                placeholder="0.00"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="preco_promo">Preço Promocional (Kz)</Label>
-              <Input
-                id="preco_promo"
-                type="number"
-                step="0.01"
-                value={formData.preco_promocional_kz}
-                onChange={(e) => setFormData({ ...formData, preco_promocional_kz: e.target.value })}
-                placeholder="0.00"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="tempo">Tempo de Preparo (min)</Label>
-              <Input
-                id="tempo"
-                type="number"
-                value={formData.tempo_preparo}
-                onChange={(e) => setFormData({ ...formData, tempo_preparo: e.target.value })}
-                placeholder="30"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="calorias">Calorias (kcal)</Label>
-              <Input
-                id="calorias"
-                type="number"
-                value={formData.calorias}
-                onChange={(e) => setFormData({ ...formData, calorias: e.target.value })}
-                placeholder="0"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="vegetariano"
-                checked={formData.vegetariano}
-                onChange={(e) => setFormData({ ...formData, vegetariano: e.target.checked })}
-              />
-              <label htmlFor="vegetariano">🥗 Vegetariano</label>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="vegano"
-                checked={formData.vegano}
-                onChange={(e) => setFormData({ ...formData, vegano: e.target.checked })}
-              />
-              <label htmlFor="vegano">🌿 Vegano</label>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="sem_gluten"
-                checked={formData.sem_gluten}
-                onChange={(e) => setFormData({ ...formData, sem_gluten: e.target.checked })}
-              />
-              <label htmlFor="sem_gluten">🌾 Sem Glúten</label>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="picante"
-                checked={formData.picante}
-                onChange={(e) => setFormData({ ...formData, picante: e.target.checked })}
-              />
-              <label htmlFor="picante">🌶️ Picante</label>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="destaque"
-                checked={formData.destaque}
-                onChange={(e) => setFormData({ ...formData, destaque: e.target.checked })}
-              />
-              <label htmlFor="destaque">⭐ Destaque</label>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="prato_dia"
-                checked={formData.prato_do_dia}
-                onChange={(e) => setFormData({ ...formData, prato_do_dia: e.target.checked })}
-              />
-              <label htmlFor="prato_dia">🎯 Prato do Dia</label>
-            </div>
+            <div className="col-span-2"><Label>Nome *</Label><Input value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} /></div>
+            <div className="col-span-2"><Label>Descrição</Label><textarea className="w-full px-3 py-2 border rounded-md bg-background" rows={2} value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} /></div>
+            <div className="col-span-2"><Label>URL da Imagem</Label><Input type="url" value={formData.imagem} onChange={(e) => setFormData({ ...formData, imagem: e.target.value })} /></div>
+            <div><Label>Preço (Kz) *</Label><Input type="number" step="0.01" value={formData.preco_kz} onChange={(e) => setFormData({ ...formData, preco_kz: e.target.value })} /></div>
+            <div><Label>Preço Promocional</Label><Input type="number" step="0.01" value={formData.preco_promocional_kz} onChange={(e) => setFormData({ ...formData, preco_promocional_kz: e.target.value })} /></div>
+            <div><Label>Tempo Preparo (min)</Label><Input type="number" value={formData.tempo_preparo} onChange={(e) => setFormData({ ...formData, tempo_preparo: e.target.value })} /></div>
+            <div><Label>Calorias</Label><Input type="number" value={formData.calorias} onChange={(e) => setFormData({ ...formData, calorias: e.target.value })} /></div>
+            {['vegetariano', 'vegano', 'sem_gluten', 'picante', 'destaque', 'prato_do_dia'].map((key) => (
+              <div key={key} className="flex items-center gap-2">
+                <input type="checkbox" id={key} checked={(formData as any)[key]} onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })} />
+                <label htmlFor={key}>{key === 'vegetariano' ? '🥗 Vegetariano' : key === 'vegano' ? '🌿 Vegano' : key === 'sem_gluten' ? '🌾 Sem Glúten' : key === 'picante' ? '🌶️ Picante' : key === 'destaque' ? '⭐ Destaque' : '🎯 Prato do Dia'}</label>
+              </div>
+            ))}
           </div>
+          <DialogFooter><Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button><Button onClick={handleSaveItem}>{editingItem ? 'Atualizar' : 'Criar'}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveItem}>{editingItem ? 'Atualizar' : 'Criar'} Item</Button>
-          </DialogFooter>
+      {/* Dialog de Categoria */}
+      <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div><Label>Nome *</Label><Input value={categoryFormData.nome} onChange={(e) => setCategoryFormData({ ...categoryFormData, nome: e.target.value })} /></div>
+            <div><Label>Descrição</Label><Input value={categoryFormData.descricao} onChange={(e) => setCategoryFormData({ ...categoryFormData, descricao: e.target.value })} /></div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>Cancelar</Button><Button onClick={handleSaveCategory}>{editingCategory ? 'Atualizar' : 'Criar'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

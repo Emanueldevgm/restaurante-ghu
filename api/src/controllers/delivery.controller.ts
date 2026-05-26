@@ -1,5 +1,8 @@
+/* eslint-disable quotes */
+/* eslint-disable comma-dangle */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response, NextFunction } from 'express';
-import pool from '../config/database';
+import { query } from '../config/database';
 import Logger from '../utils/logger.util';
 import { BadRequestError } from '../middleware/error.middleware';
 
@@ -16,23 +19,41 @@ export class DeliveryController {
         throw new BadRequestError('Província, município e bairro são obrigatórios');
       }
 
-      await pool.query(
-        `CALL calcular_taxa_entrega(?, ?, ?, @taxa_kz, @tempo_estimado)`,
+      // Buscar zona de entrega correspondente (PostgreSQL)
+      const zonaRows = await query<any[]>(
+        `SELECT taxa_entrega_kz, tempo_estimado_min 
+         FROM zonas_entrega
+         WHERE provincia = $1
+         AND ativa = TRUE
+         AND (
+           municipios @> to_jsonb($2::text)
+           OR municipios IS NULL
+           OR jsonb_array_length(municipios) = 0
+         )
+         AND (
+           bairros @> to_jsonb($3::text)
+           OR bairros IS NULL
+           OR jsonb_array_length(bairros) = 0
+         )
+         ORDER BY
+           COALESCE(jsonb_array_length(bairros), 0) DESC,
+           COALESCE(jsonb_array_length(municipios), 0) DESC
+         LIMIT 1`,
         [provincia, municipio, bairro]
       );
 
-      const [result] = await pool.query<any[]>(
-        `SELECT @taxa_kz AS taxa_kz, @tempo_estimado AS tempo_estimado_min`
-      );
-
-      const taxa_kz = parseFloat(result[0]?.taxa_kz) || 0;
-      const tempo_estimado_min = result[0]?.tempo_estimado_min || null;
+      const taxa_kz = zonaRows[0]?.taxa_entrega_kz 
+        ? parseFloat(String(zonaRows[0].taxa_entrega_kz)) 
+        : 0;
+      const tempo_estimado_min = zonaRows[0]?.tempo_estimado_min || null;
 
       if (taxa_kz === 0) {
-        const [configRows] = await pool.query<any[]>(
+        const configRows = await query<any[]>(
           `SELECT taxa_entrega_base_kz FROM configuracoes_restaurante LIMIT 1`
         );
-        const taxaBase = configRows[0]?.taxa_entrega_base_kz || 0;
+        const taxaBase = configRows[0]?.taxa_entrega_base_kz 
+          ? parseFloat(String(configRows[0].taxa_entrega_base_kz)) 
+          : 0;
 
         res.json({
           success: true,
@@ -66,10 +87,10 @@ export class DeliveryController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const [rows] = await pool.query<any[]>(
-        `SELECT id, nome, provincia, municipios, taxa_entrega_kz, tempo_estimado_min, ativa 
+      const rows = await query<any[]>(
+        `SELECT id, nome, provincia, municipios, bairros, taxa_entrega_kz, tempo_estimado_min, ativa 
          FROM zonas_entrega 
-         WHERE ativa = 1 
+         WHERE ativa = TRUE 
          ORDER BY provincia, nome`
       );
 

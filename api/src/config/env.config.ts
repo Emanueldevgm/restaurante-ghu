@@ -12,8 +12,8 @@ const EnvSchema = z.object({
     
     // Database
     DB_HOST: z.string().default('localhost'),
-    DB_PORT: z.coerce.number().default(3306),
-    DB_USER: z.string().default('root'),
+    DB_PORT: z.coerce.number().default(5432),
+    DB_USER: z.string().default('postgres'),
     DB_PASSWORD: z.string().default(''),
     DB_NAME: z.string().default('restaurante_angola_db'),
     

@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable quotes */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable comma-dangle */
 import { Request, Response, NextFunction } from 'express';
 import { query } from '../config/database';
 import {
@@ -44,22 +48,24 @@ export class ReservationController {
             }
 
             if (mesa_id) {
-                const [mesa] = await query<Mesa[]>(
-                    'SELECT * FROM mesas WHERE id = ? AND ativa = TRUE',
+                const mesaResult = await query<Mesa[]>(
+                    'SELECT * FROM mesas WHERE id = $1 AND ativa = TRUE',
                     [mesa_id]
                 );
-                if (!mesa) {
+                if (!mesaResult[0]) {
                     throw new NotFoundError('Mesa não encontrada ou inativa');
                 }
+                const mesa = mesaResult[0];
+
                 const conflitos = await query<Reserva[]>(
                     `SELECT id FROM reservas 
-           WHERE mesa_id = ? 
-           AND data_reserva = ? 
+           WHERE mesa_id = $1 
+           AND data_reserva = $2 
            AND status IN ('confirmada', 'em_andamento')
-           AND TIME(hora_reserva) BETWEEN 
-             TIME_FORMAT(SUBTIME(?, '02:00:00'), '%H:%i:%s') AND 
-             TIME_FORMAT(ADDTIME(?, '02:00:00'), '%H:%i:%s')`,
-                    [mesa_id, data_reserva, hora_reserva, hora_reserva]
+           AND hora_reserva BETWEEN 
+             ($3::time - interval '2 hours') AND 
+             ($3::time + interval '2 hours')`,
+                    [mesa_id, data_reserva, hora_reserva]
                 );
                 if (conflitos.length > 0) {
                     throw new ConflictError('Mesa já reservada neste horário');
@@ -75,7 +81,7 @@ export class ReservationController {
           id, usuario_id, mesa_id, nome_cliente, telefone_cliente,
           email_cliente, quantidade_pessoas, data_reserva, hora_reserva,
           status, ocasiao_especial, observacoes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', ?, ?)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pendente', $10, $11)`,
                 [
                     reservaId,
                     userId || null,
@@ -114,20 +120,24 @@ export class ReservationController {
         SELECT r.*, m.numero as mesa_numero, m.capacidade as mesa_capacidade
         FROM reservas r
         LEFT JOIN mesas m ON r.mesa_id = m.id
-        WHERE r.usuario_id = ?
+        WHERE r.usuario_id = $1
       `;
             const params: any[] = [userId];
+            let paramCount = 1;
 
             if (status) {
-                sql += ' AND r.status = ?';
+                paramCount++;
+                sql += ` AND r.status = $${paramCount}`;
                 params.push(status);
             }
             if (data_inicial) {
-                sql += ' AND r.data_reserva >= ?';
+                paramCount++;
+                sql += ` AND r.data_reserva >= $${paramCount}`;
                 params.push(data_inicial);
             }
             if (data_final) {
-                sql += ' AND r.data_reserva <= ?';
+                paramCount++;
+                sql += ` AND r.data_reserva <= $${paramCount}`;
                 params.push(data_final);
             }
 
@@ -136,7 +146,12 @@ export class ReservationController {
             const parsedLimit = Math.max(1, parseInt(limit as string, 10) || 20);
             const parsedOffset = Math.max(0, (parseInt(page as string, 10) - 1) * parsedLimit);
 
-            sql += ` LIMIT ${parsedLimit} OFFSET ${parsedOffset}`;
+            paramCount++;
+            sql += ` LIMIT $${paramCount}`;
+            params.push(parsedLimit);
+            paramCount++;
+            sql += ` OFFSET $${paramCount}`;
+            params.push(parsedOffset);
 
             const reservations = await query<Reserva[]>(sql, params);
 
@@ -159,11 +174,13 @@ export class ReservationController {
             const userId = (req as any).user?.userId;
             const userRole = (req as any).user?.role;
 
-            const [reserva] = await query<Reserva[]>(
-                'SELECT * FROM reservas WHERE id = ?',
+            const reservaResult = await query<Reserva[]>(
+                'SELECT * FROM reservas WHERE id = $1',
                 [id]
             );
-            if (!reserva) throw new NotFoundError('Reserva');
+            if (!reservaResult[0]) throw new NotFoundError('Reserva');
+
+            const reserva = reservaResult[0];
 
             if (
                 userRole !== 'administrador' &&
@@ -177,7 +194,7 @@ export class ReservationController {
             }
 
             await query(
-                'UPDATE reservas SET status = "cancelada", updated_at = NOW() WHERE id = ?',
+                "UPDATE reservas SET status = 'cancelada', updated_at = NOW() WHERE id = $1",
                 [id]
             );
 
@@ -209,19 +226,23 @@ export class ReservationController {
         WHERE 1=1
       `;
             const params: any[] = [];
+            let paramCount = 0;
 
             if (status) {
-                sql += ' AND r.status = ?';
+                paramCount++;
+                sql += ` AND r.status = $${paramCount}`;
                 params.push(status);
             }
             if (data) {
-                sql += ' AND r.data_reserva = ?';
+                paramCount++;
+                sql += ` AND r.data_reserva = $${paramCount}`;
                 params.push(data);
             } else {
-                sql += ' AND r.data_reserva >= CURDATE()';
+                sql += ' AND r.data_reserva >= CURRENT_DATE';
             }
             if (mesa_id) {
-                sql += ' AND r.mesa_id = ?';
+                paramCount++;
+                sql += ` AND r.mesa_id = $${paramCount}`;
                 params.push(mesa_id);
             }
 
@@ -230,7 +251,12 @@ export class ReservationController {
             const parsedLimit = Math.max(1, parseInt(limit as string, 10) || 50);
             const parsedOffset = Math.max(0, (parseInt(page as string, 10) - 1) * parsedLimit);
 
-            sql += ` LIMIT ${parsedLimit} OFFSET ${parsedOffset}`;
+            paramCount++;
+            sql += ` LIMIT $${paramCount}`;
+            params.push(parsedLimit);
+            paramCount++;
+            sql += ` OFFSET $${paramCount}`;
+            params.push(parsedOffset);
 
             const reservations = await query<Reserva[]>(sql, params);
 
@@ -254,7 +280,7 @@ export class ReservationController {
             await query(
                 `UPDATE reservas 
          SET status = 'confirmada', confirmada_em = NOW(), updated_at = NOW() 
-         WHERE id = ?`,
+         WHERE id = $1`,
                 [id]
             );
 
@@ -278,7 +304,7 @@ export class ReservationController {
             await query(
                 `UPDATE reservas 
          SET status = 'em_andamento', check_in_em = NOW(), updated_at = NOW() 
-         WHERE id = ?`,
+         WHERE id = $1`,
                 [id]
             );
 
@@ -302,7 +328,7 @@ export class ReservationController {
             await query(
                 `UPDATE reservas 
          SET status = 'finalizada', check_out_em = NOW(), updated_at = NOW() 
-         WHERE id = ?`,
+         WHERE id = $1`,
                 [id]
             );
 

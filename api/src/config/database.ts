@@ -1,20 +1,29 @@
-import mysql from 'mysql2/promise';
+/* eslint-disable comma-dangle */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { Pool, QueryResult } from 'pg';
 import env from './env.config';
 
-// Configuração do pool de conexões
-const pool = mysql.createPool({
+// Configuração do pool de conexões PostgreSQL
+const pool = new Pool({
     host: env.DB_HOST,
     port: env.DB_PORT,
     user: env.DB_USER,
     password: env.DB_PASSWORD,
     database: env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-    enableKeepAlive: true,
-    keepAliveInitialDelay: 0,
-    timezone: '+01:00', // Angola timezone (WAT - West Africa Time)
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
 });
+
+/**
+ * Converte placeholders ? do MySQL para $1, $2, $3 do PostgreSQL
+ * Exemplo: "SELECT * FROM usuarios WHERE email = ?" → "SELECT * FROM usuarios WHERE email = $1"
+ */
+const formatQuery = (sql: string, params: any[] = []): { text: string; values: any[] } => {
+    let index = 0;
+    const text = sql.replace(/\?/g, () => `$${++index}`);
+    return { text, values: params };
+};
 
 /**
  * Testa a conexão com o banco de dados
@@ -22,31 +31,31 @@ const pool = mysql.createPool({
  */
 export const testConnection = async (): Promise<boolean> => {
     try {
-        const connection = await pool.getConnection();
-        console.log('✅ Conexão com MySQL estabelecida com sucesso!');
+        const client = await pool.connect();
+        await client.query('SELECT 1');
+        console.log('✅ Conexão com PostgreSQL estabelecida com sucesso!');
         console.log(`   Database: ${env.DB_NAME}`);
         console.log(`   Host: ${env.DB_HOST}:${env.DB_PORT}`);
-        connection.release();
+        client.release();
         return true;
     } catch (error) {
-        console.error('❌ Erro ao conectar ao MySQL:', error);
+        console.error('❌ Erro ao conectar ao PostgreSQL:', error);
         return false;
     }
 };
 
 /**
  * Executa uma query no banco de dados
- * @param sql - String SQL a executar
- * @param params - Parâmetros para prepared statement
- * @returns Array de resultados
+ * Converte automaticamente placeholders ? para $1, $2...
+ * @param sql - String SQL a executar (pode usar ? do MySQL)
+ * @param params - Array de parâmetros para prepared statement
+ * @returns Array de resultados (rows)
  */
-export const query = async <T = any>(
-    sql: string,
-    params?: any[]
-): Promise<T> => {
+export const query = async <T = any>(sql: string, params: any[] = []): Promise<T> => {
     try {
-        const [rows] = await pool.execute(sql, params);
-        return rows as T;
+        const { text, values } = formatQuery(sql, params);
+        const result: QueryResult = await pool.query(text, values);
+        return result.rows as unknown as T;
     } catch (error) {
         console.error('❌ Erro na query:', sql);
         throw error;
@@ -54,25 +63,41 @@ export const query = async <T = any>(
 };
 
 /**
+ * Tipo para conexão de base de dados (usado em transações)
+ */
+export type DatabaseConnection = {
+    query: <T = any>(sql: string, params?: any[]) => Promise<T>;
+};
+
+/**
  * Executa operações em uma transação
- * @param callback - Função que executa as operações
+ * @param callback - Função que recebe a conexão e executa as queries
  * @returns Resultado da transação
  */
 export const transaction = async <T>(
-    callback: (connection: mysql.PoolConnection) => Promise<T>
+    callback: (connection: DatabaseConnection) => Promise<T>
 ): Promise<T> => {
-    const connection = await pool.getConnection();
-    await connection.beginTransaction();
+    const client = await pool.connect();
+
+    // Criar uma conexão com a mesma interface de query
+    const connection: DatabaseConnection = {
+        query: async <R = any>(sql: string, params: any[] = []): Promise<R> => {
+            const { text, values } = formatQuery(sql, params);
+            const result: QueryResult = await client.query(text, values);
+            return result.rows as unknown as R;
+        },
+    };
 
     try {
+        await client.query('BEGIN');
         const result = await callback(connection);
-        await connection.commit();
+        await client.query('COMMIT');
         return result;
     } catch (error) {
-        await connection.rollback();
+        await client.query('ROLLBACK');
         throw error;
     } finally {
-        connection.release();
+        client.release();
     }
 };
 

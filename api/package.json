@@ -8,7 +8,7 @@
         "build": "tsc",
         "start": "node dist/server.js",
         "start:prod": "NODE_ENV=production node dist/server.js",
-        "db:init": "mysql -u root -p < database/schema.sql",
+        "db:init": "psql postgresql://%DB_USER%:%DB_PASSWORD%@%DB_HOST%:%DB_PORT%/%DB_NAME% -f database/Banco.sql",
         "test": "jest",
         "lint": "eslint src --ext .ts",
         "format": "prettier --write \"src/**/*.ts\""
@@ -18,7 +18,7 @@
         "api",
         "express",
         "typescript",
-        "mysql",
+        "postgresql",
         "angola"
     ],
     "author": "Restaurante GHU",
@@ -33,8 +33,8 @@
         "jsonwebtoken": "^9.0.2",
         "morgan": "^1.10.0",
         "multer": "^1.4.5-lts.1",
-        "mysql2": "^3.6.5",
         "nodemailer": "^6.10.1",
+        "pg": "^8.21.0",
         "uuid": "^9.0.1",
         "zod": "^3.22.4"
     },
@@ -48,6 +48,7 @@
         "@types/multer": "^1.4.11",
         "@types/node": "^20.10.6",
         "@types/nodemailer": "^6.4.23",
+        "@types/pg": "^8.20.0",
         "@types/uuid": "^9.0.7",
         "@typescript-eslint/eslint-plugin": "^6.15.0",
         "@typescript-eslint/parser": "^6.15.0",

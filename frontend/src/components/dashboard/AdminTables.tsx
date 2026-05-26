@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// src/components/admin/AdminTables.tsx
 import React, { useState } from 'react';
-import { useTables, useCreateTable, useUpdateTable, useDeleteTable } from '@/hooks/use-restaurant';
+import { useTables, useCreateTable, useUpdateTable, useDeleteTable, useToggleTable, useTableStatus } from '@/hooks/use-restaurant';
 import { Table as ApiTable } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,95 +9,75 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit2, Trash2, Loader } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader, Power, PowerOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function AdminTables() {
   const { data: tables = [], isLoading, refetch } = useTables();
+  const { data: tableStatus = [] } = useTableStatus();
   const createTable = useCreateTable();
   const updateTable = useUpdateTable();
   const deleteTable = useDeleteTable();
+  const toggleTable = useToggleTable();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTable, setEditingTable] = useState<ApiTable | null>(null);
   const [formData, setFormData] = useState({
-    numero: '',
-    capacidade: '',
-    tipo: 'normal' as ApiTable['tipo'],
-    localizacao: '',
-    observacoes: '',
+    numero: '', capacidade: '', tipo: 'normal' as ApiTable['tipo'], localizacao: '', observacoes: '',
   });
+
+  const getTableStatusColor = (tableId: string) => {
+    const status = tableStatus.find((s: any) => s.id === tableId);
+    if (status?.status_mesa === 'ocupada') return 'bg-red-500';
+    if (status?.status_mesa === 'reservada') return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
 
   const handleOpenDialog = (table?: ApiTable) => {
     if (table) {
       setEditingTable(table);
       setFormData({
-        numero: table.numero,
-        capacidade: table.capacidade.toString(),
-        tipo: table.tipo,
-        localizacao: table.localizacao || '',
-        observacoes: table.observacoes || '',
+        numero: table.numero, capacidade: table.capacidade.toString(), tipo: table.tipo,
+        localizacao: table.localizacao || '', observacoes: table.observacoes || '',
       });
     } else {
       setEditingTable(null);
-      setFormData({
-        numero: '',
-        capacidade: '',
-        tipo: 'normal',
-        localizacao: '',
-        observacoes: '',
-      });
+      setFormData({ numero: '', capacidade: '', tipo: 'normal', localizacao: '', observacoes: '' });
     }
     setIsDialogOpen(true);
   };
 
   const handleSave = async () => {
-    if (!formData.numero || !formData.capacidade) {
-      toast.error('Número e capacidade são obrigatórios');
-      return;
-    }
-
+    if (!formData.numero || !formData.capacidade) { toast.error('Número e capacidade são obrigatórios'); return; }
     const data = {
-      numero: formData.numero,
-      capacidade: parseInt(formData.capacidade),
-      tipo: formData.tipo,
-      localizacao: formData.localizacao || undefined,
-      observacoes: formData.observacoes || undefined,
+      numero: formData.numero, capacidade: parseInt(formData.capacidade),
+      tipo: formData.tipo, localizacao: formData.localizacao || undefined, observacoes: formData.observacoes || undefined,
     };
-
     if (editingTable) {
       updateTable.mutate({ id: editingTable.id, data }, {
-        onSuccess: () => {
-          toast.success('Mesa atualizada');
-          setIsDialogOpen(false);
-          refetch();
-        },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onSuccess: () => { toast.success('Mesa atualizada'); setIsDialogOpen(false); refetch(); },
         onError: (error: any) => toast.error(error.response?.data?.message || 'Erro ao atualizar'),
       });
     } else {
       createTable.mutate(data, {
-        onSuccess: () => {
-          toast.success('Mesa criada');
-          setIsDialogOpen(false);
-          refetch();
-        },
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onSuccess: () => { toast.success('Mesa criada'); setIsDialogOpen(false); refetch(); },
         onError: (error: any) => toast.error(error.response?.data?.message || 'Erro ao criar'),
       });
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleToggle = (table: ApiTable) => {
+    toggleTable.mutate(table.id, {
+      onSuccess: () => { toast.success(`Mesa ${table.ativa ? 'desativada' : 'ativada'}`); refetch(); },
+      onError: (error: any) => toast.error(error.response?.data?.message || 'Erro ao alterar status'),
+    });
+  };
+
+  const handleDelete = (id: string) => {
     if (!window.confirm('Tem certeza que deseja deletar esta mesa?')) return;
     deleteTable.mutate(id, {
-      onSuccess: () => {
-        toast.success('Mesa deletada');
-        refetch();
-      },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onSuccess: () => { toast.success('Mesa deletada'); refetch(); },
       onError: (error: any) => toast.error(error.response?.data?.message || 'Erro ao deletar'),
     });
   };
@@ -115,30 +94,23 @@ export function AdminTables() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Gerenciamento de Mesas</h2>
-        <Button onClick={() => handleOpenDialog()} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Nova Mesa
-        </Button>
+        <Button onClick={() => handleOpenDialog()} className="gap-2"><Plus className="w-4 h-4" /> Nova Mesa</Button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {tables.map((table) => (
-          <Card key={table.id} className="relative group">
-            <CardContent className="p-4 text-center">
+          <Card key={table.id} className={`relative group border-2 ${!table.ativa ? 'opacity-50' : ''}`}>
+            <div className={`absolute top-0 left-0 right-0 h-1 ${getTableStatusColor(table.id)}`} />
+            <CardContent className="p-4 text-center pt-5">
               <p className="text-2xl font-bold mb-1">Mesa {table.numero}</p>
-              <p className="text-sm text-muted-foreground mb-2">
-                {table.capacidade} lugares
-              </p>
-              <Badge variant={table.ativa ? 'default' : 'destructive'}>
-                {table.ativa ? 'Ativa' : 'Inativa'}
-              </Badge>
+              <p className="text-sm text-muted-foreground mb-2">{table.capacidade} lugares</p>
+              <Badge variant={table.ativa ? 'default' : 'destructive'}>{table.ativa ? 'Ativa' : 'Inativa'}</Badge>
               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleOpenDialog(table)}>
-                  <Edit2 className="w-4 h-4" />
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleOpenDialog(table)}><Edit2 className="w-4 h-4" /></Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleToggle(table)}>
+                  {table.ativa ? <PowerOff className="w-4 h-4 text-yellow-600" /> : <Power className="w-4 h-4 text-green-600" />}
                 </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDelete(table.id)}>
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDelete(table.id)}><Trash2 className="w-4 h-4" /></Button>
               </div>
             </CardContent>
           </Card>
@@ -147,27 +119,13 @@ export function AdminTables() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingTable ? 'Editar Mesa' : 'Nova Mesa'}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>{editingTable ? 'Editar Mesa' : 'Nova Mesa'}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
-            <div>
-              <Label htmlFor="numero">Número da Mesa *</Label>
-              <Input id="numero" value={formData.numero} onChange={e => setFormData({ ...formData, numero: e.target.value })} />
-            </div>
-            <div>
-              <Label htmlFor="capacidade">Capacidade (pessoas) *</Label>
-              <Input id="capacidade" type="number" value={formData.capacidade} onChange={e => setFormData({ ...formData, capacidade: e.target.value })} />
-            </div>
-            <div>
-              <Label htmlFor="tipo">Tipo</Label>
-              
-              
-            
+            <div><Label>Número *</Label><Input value={formData.numero} onChange={e => setFormData({ ...formData, numero: e.target.value })} /></div>
+            <div><Label>Capacidade *</Label><Input type="number" value={formData.capacidade} onChange={e => setFormData({ ...formData, capacidade: e.target.value })} /></div>
+            <div><Label>Tipo</Label>
               <Select value={formData.tipo} onValueChange={(val) => setFormData({ ...formData, tipo: val as any })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="normal">Normal</SelectItem>
                   <SelectItem value="vip">VIP</SelectItem>
@@ -176,14 +134,8 @@ export function AdminTables() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label htmlFor="localizacao">Localização</Label>
-              <Input id="localizacao" value={formData.localizacao} onChange={e => setFormData({ ...formData, localizacao: e.target.value })} />
-            </div>
-            <div>
-              <Label htmlFor="observacoes">Observações</Label>
-              <Input id="observacoes" value={formData.observacoes} onChange={e => setFormData({ ...formData, observacoes: e.target.value })} />
-            </div>
+            <div><Label>Localização</Label><Input value={formData.localizacao} onChange={e => setFormData({ ...formData, localizacao: e.target.value })} /></div>
+            <div><Label>Observações</Label><Input value={formData.observacoes} onChange={e => setFormData({ ...formData, observacoes: e.target.value })} /></div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>

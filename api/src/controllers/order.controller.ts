@@ -1,5 +1,10 @@
+/* eslint-disable comma-dangle */
+/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable prefer-const */
+/* eslint-disable quotes */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response, NextFunction } from 'express';
-import { query, transaction } from '../config/database';
+import { query, transaction, DatabaseConnection } from '../config/database';
 import {
     Pedido,
     ItemPedido,
@@ -13,7 +18,6 @@ import {
     ForbiddenError,
 } from '../middleware/error.middleware';
 import { v4 as uuidv4 } from 'uuid';
-import { PoolConnection } from 'mysql2/promise';
 
 export class OrderController {
     private static mapOrderTipoToDb(tipo: string) {
@@ -58,13 +62,13 @@ export class OrderController {
                 throw new BadRequestError('Mesa é obrigatória para pedidos no local');
             }
 
-            const result = await transaction(async (conn: PoolConnection) => {
+            const result = await transaction(async (conn: DatabaseConnection) => {
                 let subtotal_kz = 0;
                 const itensValidados = [];
 
                 for (const item of itens) {
-                    const [menuItem] = await conn.query<any[]>(
-                        'SELECT * FROM itens_cardapio WHERE id = ? AND status = "disponivel"',
+                    const menuItem = await conn.query<any[]>(
+                        "SELECT * FROM itens_cardapio WHERE id = ? AND status = 'disponivel'",
                         [item.item_cardapio_id]
                     );
                     if (!menuItem || menuItem.length === 0) {
@@ -90,6 +94,7 @@ export class OrderController {
                 if (tipo === 'delivery' && endereco_id) {
                     const [endereco] = await conn.query<any[]>(
                         'SELECT * FROM enderecos_clientes WHERE id = ?',
+                        // eslint-disable-next-line comma-dangle
                         [endereco_id]
                     );
                     if (!endereco || endereco.length === 0) {
@@ -101,8 +106,8 @@ export class OrderController {
                          WHERE provincia = ? 
                          AND ativa = TRUE
                          AND (
-                           JSON_CONTAINS(municipios, JSON_QUOTE(?))
-                           OR JSON_LENGTH(municipios) = 0
+                           municipios::jsonb @> to_jsonb(array[?])
+                           OR jsonb_array_length(municipios::jsonb) = 0
                          )
                          LIMIT 1`,
                         [enderecoData.provincia, enderecoData.municipio]
@@ -125,8 +130,8 @@ export class OrderController {
                         `SELECT * FROM cupons 
                          WHERE codigo = ? 
                          AND status = 'ativo'
-                         AND data_inicio <= CURDATE()
-                         AND data_fim >= CURDATE()
+                         AND data_inicio <= CURRENT_DATE
+                         AND data_fim >= CURRENT_DATE
                          AND (quantidade_disponivel IS NULL OR quantidade_disponivel > quantidade_usada)`,
                         [cupom_codigo]
                     );
@@ -404,7 +409,7 @@ export class OrderController {
             }
 
             await query(
-                'UPDATE pedidos SET status = "cancelado", updated_at = NOW() WHERE id = ?',
+                "UPDATE pedidos SET status = 'cancelado', updated_at = NOW() WHERE id = ?",
                 [id]
             );
 

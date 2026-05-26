@@ -4,16 +4,8 @@ import { Button } from '@/components/ui/button';
 
 const slides = [
   {
-    image: '/img/',
+    image: '/img/parte-traseira.jpg',
     alt: 'Grande Hotel do Uíge – Fachada principal',
-  },
-  {
-    image: '/img/',
-    alt: 'Restaurante e área de lazer',
-  },
-  {
-    image: '/img/',
-    alt: 'Gastronomia de excelência',
   },
   // fallback
   {
@@ -74,9 +66,7 @@ export function Hero() {
       <div className="relative z-10 container max-w-3xl text-center">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-sm animate-fade-up">
           <Star className="h-4 w-4 text-accent" fill="currentColor" />
-          <span className="text-sm font-medium text-accent">
-            ★★★★★ 4.8 · Hotel &amp; Restaurante Premium
-          </span>
+          
         </div>
 
         <h1 className="font-display mb-6 text-4xl font-bold leading-tight text-white animate-fade-up md:text-6xl lg:text-7xl">

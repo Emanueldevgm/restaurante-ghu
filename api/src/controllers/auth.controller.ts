@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable comma-dangle */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable quotes */
 import bcrypt from 'bcryptjs';
 import { Request, Response, NextFunction } from 'express';
 import { query } from '../config/database';
@@ -15,6 +19,7 @@ import {
     BadRequestError,
     UnauthorizedError,
     ConflictError,
+    NotFoundError,
 } from '../middleware/error.middleware';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -46,7 +51,7 @@ export class AuthController {
 
             if (email) {
                 const existingEmail = await query<Usuario[]>(
-                    'SELECT id FROM usuarios WHERE email = ?',
+                    'SELECT id FROM usuarios WHERE email = $1',
                     [email]
                 );
                 if (existingEmail.length > 0) {
@@ -55,7 +60,7 @@ export class AuthController {
             }
 
             const existingPhone = await query<Usuario[]>(
-                'SELECT id FROM usuarios WHERE telefone = ?',
+                'SELECT id FROM usuarios WHERE telefone = $1',
                 [telefone]
             );
             if (existingPhone.length > 0) {
@@ -69,7 +74,7 @@ export class AuthController {
                 `INSERT INTO usuarios (
           id, nome_completo, email, telefone, senha_hash, bi, 
           data_nascimento, genero, role, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'cliente', 'ativo')`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'cliente', 'ativo')`,
                 [
                     userId,
                     nome_completo,
@@ -82,15 +87,17 @@ export class AuthController {
                 ]
             );
 
-            const [user] = await query<Usuario[]>(
-                'SELECT id, nome_completo, email, telefone, role FROM usuarios WHERE id = ?',
+            const user = await query<Usuario[]>(
+                'SELECT id, nome_completo, email, telefone, role FROM usuarios WHERE id = $1',
                 [userId]
             );
 
+            const userData = user[0];
+
             const token = generateToken({
-                userId: user.id,
-                email: user.email || '',
-                role: user.role,
+                userId: userData.id,
+                email: userData.email || '',
+                role: userData.role,
             });
 
             res.status(201).json({
@@ -99,11 +106,11 @@ export class AuthController {
                 data: {
                     token,
                     user: {
-                        id: user.id,
-                        nome_completo: user.nome_completo,
-                        email: user.email,
-                        telefone: user.telefone,
-                        role: user.role,
+                        id: userData.id,
+                        nome_completo: userData.nome_completo,
+                        email: userData.email,
+                        telefone: userData.telefone,
+                        role: userData.role,
                     },
                 },
             });
@@ -128,13 +135,13 @@ export class AuthController {
             let user: Usuario | null = null;
             if (email) {
                 const users = await query<Usuario[]>(
-                    'SELECT * FROM usuarios WHERE email = ? AND status = "ativo"',
+                    "SELECT * FROM usuarios WHERE email = $1 AND status = 'ativo'",
                     [email]
                 );
                 user = users[0] || null;
             } else if (telefone) {
                 const users = await query<Usuario[]>(
-                    'SELECT * FROM usuarios WHERE telefone = ? AND status = "ativo"',
+                    "SELECT * FROM usuarios WHERE telefone = $1 AND status = 'ativo'",
                     [telefone]
                 );
                 user = users[0] || null;
@@ -151,7 +158,7 @@ export class AuthController {
                 throw new UnauthorizedError('Credenciais inválidas');
             }
 
-            await query('UPDATE usuarios SET ultimo_acesso = NOW() WHERE id = ?', [
+            await query('UPDATE usuarios SET ultimo_acesso = NOW() WHERE id = $1', [
                 user.id,
             ]);
 
@@ -182,6 +189,64 @@ export class AuthController {
         }
     }
 
+    // Atualizar usuário (admin)
+static async updateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const { id } = req.params;
+        const { nome_completo, email, telefone, role, status, data_nascimento, genero } = req.body;
+
+        const userResult = await query<Usuario[]>(
+            'SELECT id FROM usuarios WHERE id = $1',
+            [id]
+        );
+        if (!userResult[0]) throw new NotFoundError('Usuário');
+
+        if (email) {
+            const existing = await query<Usuario[]>(
+                'SELECT id FROM usuarios WHERE email = $1 AND id != $2',
+                [email, id]
+            );
+            if (existing.length > 0) throw new ConflictError('Este email já está em uso');
+        }
+
+        await query(
+            `UPDATE usuarios SET 
+                nome_completo = COALESCE($1, nome_completo),
+                email = COALESCE($2, email),
+                telefone = COALESCE($3, telefone),
+                role = COALESCE($4, role),
+                status = COALESCE($5, status),
+                data_nascimento = COALESCE($6, data_nascimento),
+                genero = COALESCE($7, genero),
+                updated_at = NOW()
+            WHERE id = $8`,
+            [nome_completo, email, telefone, role, status, data_nascimento, genero, id]
+        );
+
+        res.json({ success: true, message: 'Usuário atualizado com sucesso' });
+    } catch (error) {
+        next(error);
+    }
+}
+
+// Deletar usuário (admin)
+static async deleteUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const { id } = req.params;
+        const userResult = await query<Usuario[]>(
+            'SELECT id FROM usuarios WHERE id = $1',
+            [id]
+        );
+        if (!userResult[0]) throw new NotFoundError('Usuário');
+
+        await query('DELETE FROM usuarios WHERE id = $1', [id]);
+
+        res.json({ success: true, message: 'Usuário eliminado com sucesso' });
+    } catch (error) {
+        next(error);
+    }
+}
+
     // Obter perfil do usuário autenticado
     static async getProfile(
         req: Request,
@@ -191,21 +256,21 @@ export class AuthController {
         try {
             const userId = (req as any).user?.userId;
 
-            const [user] = await query<any[]>(
+            const user = await query<any[]>(
                 `SELECT id, nome_completo, email, telefone, telefone_alternativo, 
          bi, nif, role, status, foto_perfil, data_nascimento, genero, 
          created_at, ultimo_acesso
-         FROM usuarios WHERE id = ?`,
+         FROM usuarios WHERE id = $1`,
                 [userId]
             );
 
-            if (!user) {
+            if (!user[0]) {
                 throw new UnauthorizedError('Usuário não encontrado');
             }
 
             res.json({
                 success: true,
-                data: user,
+                data: user[0],
             });
         } catch (error) {
             next(error);
@@ -232,7 +297,7 @@ export class AuthController {
 
             if (email) {
                 const existing = await query<Usuario[]>(
-                    'SELECT id FROM usuarios WHERE email = ? AND id != ?',
+                    'SELECT id FROM usuarios WHERE email = $1 AND id != $2',
                     [email, userId]
                 );
                 if (existing.length > 0) {
@@ -242,15 +307,15 @@ export class AuthController {
 
             await query(
                 `UPDATE usuarios SET 
-         nome_completo = COALESCE(?, nome_completo),
-         email = COALESCE(?, email),
-         telefone = COALESCE(?, telefone),
-         telefone_alternativo = COALESCE(?, telefone_alternativo),
-         data_nascimento = COALESCE(?, data_nascimento),
-         genero = COALESCE(?, genero),
-         foto_perfil = COALESCE(?, foto_perfil),
+         nome_completo = COALESCE($1, nome_completo),
+         email = COALESCE($2, email),
+         telefone = COALESCE($3, telefone),
+         telefone_alternativo = COALESCE($4, telefone_alternativo),
+         data_nascimento = COALESCE($5, data_nascimento),
+         genero = COALESCE($6, genero),
+         foto_perfil = COALESCE($7, foto_perfil),
          updated_at = NOW()
-         WHERE id = ?`,
+         WHERE id = $8`,
                 [
                     nome_completo,
                     email,
@@ -284,7 +349,7 @@ export class AuthController {
             }
 
             const users = await query<Usuario[]>(
-                'SELECT id FROM usuarios WHERE email = ?',
+                'SELECT id FROM usuarios WHERE email = $1',
                 [email]
             );
 
@@ -300,7 +365,7 @@ export class AuthController {
             const expiresAt = new Date(Date.now() + 3600000); // 1 hora
 
             await query(
-                'INSERT INTO password_resets (id, email, token, expires_at, used) VALUES (?, ?, ?, ?, 0)',
+                'INSERT INTO password_resets (id, email, token, expires_at, used) VALUES ($1, $2, $3, $4, FALSE)',
                 [uuidv4(), email, token, expiresAt]
             );
 
@@ -336,7 +401,7 @@ export class AuthController {
             }
 
             const resets = await query<any[]>(
-                'SELECT * FROM password_resets WHERE token = ? AND expires_at > NOW() AND used = 0',
+                'SELECT * FROM password_resets WHERE token = $1 AND expires_at > NOW() AND used = FALSE',
                 [token]
             );
 
@@ -347,8 +412,8 @@ export class AuthController {
             const reset = resets[0];
             const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-            await query('UPDATE usuarios SET senha_hash = ? WHERE email = ?', [hashedPassword, reset.email]);
-            await query('UPDATE password_resets SET used = 1 WHERE id = ?', [reset.id]);
+            await query('UPDATE usuarios SET senha_hash = $1 WHERE email = $2', [hashedPassword, reset.email]);
+            await query('UPDATE password_resets SET used = TRUE WHERE id = $1', [reset.id]);
 
             res.json({
                 success: true,
@@ -377,10 +442,12 @@ export class AuthController {
                 throw new BadRequestError('A nova senha deve ter pelo menos 6 caracteres');
             }
 
-            const [user] = await query<Usuario[]>(
-                'SELECT senha_hash FROM usuarios WHERE id = ?',
+            const userResult = await query<Usuario[]>(
+                'SELECT senha_hash FROM usuarios WHERE id = $1',
                 [userId]
             );
+
+            const user = userResult[0];
 
             const isPasswordValid = await comparePassword(senha_atual, user.senha_hash);
             if (!isPasswordValid) {
@@ -388,7 +455,7 @@ export class AuthController {
             }
 
             const senha_hash = await hashPassword(senha_nova);
-            await query('UPDATE usuarios SET senha_hash = ?, updated_at = NOW() WHERE id = ?', [
+            await query('UPDATE usuarios SET senha_hash = $1, updated_at = NOW() WHERE id = $2', [
                 senha_hash,
                 userId,
             ]);
@@ -466,7 +533,7 @@ export class AuthController {
 
             if (email) {
                 const existingEmail = await query<Usuario[]>(
-                    'SELECT id FROM usuarios WHERE email = ?',
+                    'SELECT id FROM usuarios WHERE email = $1',
                     [email]
                 );
                 if (existingEmail.length > 0) {
@@ -475,7 +542,7 @@ export class AuthController {
             }
 
             const existingPhone = await query<Usuario[]>(
-                'SELECT id FROM usuarios WHERE telefone = ?',
+                'SELECT id FROM usuarios WHERE telefone = $1',
                 [telefone]
             );
             if (existingPhone.length > 0) {
@@ -484,7 +551,7 @@ export class AuthController {
 
             if (bi) {
                 const existingBI = await query<Usuario[]>(
-                    'SELECT id FROM usuarios WHERE bi = ?',
+                    'SELECT id FROM usuarios WHERE bi = $1',
                     [bi]
                 );
                 if (existingBI.length > 0) {
@@ -494,7 +561,7 @@ export class AuthController {
 
             if (nif) {
                 const existingNIF = await query<Usuario[]>(
-                    'SELECT id FROM usuarios WHERE nif = ?',
+                    'SELECT id FROM usuarios WHERE nif = $1',
                     [nif]
                 );
                 if (existingNIF.length > 0) {
@@ -509,7 +576,7 @@ export class AuthController {
                 `INSERT INTO usuarios (
           id, nome_completo, email, telefone, telefone_alternativo, senha_hash,
           bi, nif, role, status, data_nascimento, genero
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
                 [
                     userId,
                     nome_completo,
@@ -526,12 +593,14 @@ export class AuthController {
                 ]
             );
 
-            const [user] = await query<any[]>(
+            const userResult = await query<any[]>(
                 `SELECT id, nome_completo, email, telefone, telefone_alternativo,
          bi, nif, role, status, data_nascimento, genero, created_at
-         FROM usuarios WHERE id = ?`,
+         FROM usuarios WHERE id = $1`,
                 [userId]
             );
+
+            const user = userResult[0];
 
             res.status(201).json({
                 success: true,
@@ -577,17 +646,17 @@ export class AuthController {
                 throw new BadRequestError('Status inválido');
             }
 
-            const [existingUser] = await query<Usuario[]>(
-                'SELECT id FROM usuarios WHERE id = ?',
+            const existingUser = await query<Usuario[]>(
+                'SELECT id FROM usuarios WHERE id = $1',
                 [id]
             );
 
-            if (!existingUser) {
+            if (!existingUser[0]) {
                 throw new BadRequestError('Usuário não encontrado');
             }
 
             await query(
-                'UPDATE usuarios SET status = ?, updated_at = NOW() WHERE id = ?',
+                'UPDATE usuarios SET status = $1, updated_at = NOW() WHERE id = $2',
                 [status, id]
             );
 

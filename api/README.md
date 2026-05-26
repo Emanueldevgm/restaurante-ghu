@@ -1,13 +1,13 @@
 # API REST - Restaurante GHU (Grande Hotel do Uíge)
 
-API REST completa para sistema de gestão de restaurante, desenvolvida em Node.js com TypeScript, Express e MySQL.
+API REST completa para sistema de gestão de restaurante, desenvolvida em Node.js com TypeScript, Express e PostgreSQL.
 
 ## 🚀 Tecnologias
 
 - **Node.js** - Runtime JavaScript
 - **TypeScript** - Superset JavaScript com tipagem
 - **Express** - Framework web
-- **MySQL2** - Driver MySQL
+- **pg** - Driver PostgreSQL
 - **JWT** - Autenticação via tokens
 - **Bcrypt** - Hash de senhas
 - **Zod** - Validação de dados
@@ -18,7 +18,7 @@ API REST completa para sistema de gestão de restaurante, desenvolvida em Node.j
 ## 📋 Pré-requisitos
 
 - Node.js 18+ instalado
-- MySQL 8.0+ instalado e rodando
+- PostgreSQL 13+ instalado e rodando
 - Git (opcional)
 
 ## ⚙️ Instalação
@@ -41,8 +41,8 @@ API REST completa para sistema de gestão de restaurante, desenvolvida em Node.j
    Edite o arquivo `.env` com suas configurações:
    ```env
    DB_HOST=localhost
-   DB_PORT=3306
-   DB_USER=root
+   DB_PORT=5432
+   DB_USER=postgres
    DB_PASSWORD=sua_senha
    DB_NAME=restaurante_angola_db
    
@@ -54,10 +54,10 @@ API REST completa para sistema de gestão de restaurante, desenvolvida em Node.j
    
    Execute o script SQL para criar o banco e as tabelas:
    ```bash
-   mysql -u root -p < database/schema.sql
+   psql postgresql://postgres:@localhost:5432/restaurante_angola_db -f database/Banco.sql
    ```
    
-   Ou execute manualmente no MySQL Workbench/phpMyAdmin o arquivo `database/schema.sql`
+   Ou execute manualmente no pgAdmin/DBeaver o arquivo `database/Banco.sql`
 
 ## 🏃 Executando a API
 

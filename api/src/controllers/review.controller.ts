@@ -1,3 +1,7 @@
+/* eslint-disable comma-dangle */
+/* eslint-disable quotes */
+/* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
 import { query } from '../config/database';
 import Logger from '../utils/logger.util';
@@ -11,7 +15,7 @@ export class ReviewController {
          FROM avaliacoes a
          LEFT JOIN usuarios u ON a.usuario_id = u.id
          ORDER BY a.created_at DESC
-         LIMIT ? OFFSET ?`,
+         LIMIT $1 OFFSET $2`,
         [Number(limit), Number(offset)]
       );
       res.json({ success: true, data: reviews });
@@ -24,8 +28,8 @@ export class ReviewController {
   static async getReview(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const [reviews] = await query<any[]>(
-        'SELECT * FROM avaliacoes WHERE id = ?', [id]
+      const reviews = await query<any[]>(
+        'SELECT * FROM avaliacoes WHERE id = $1', [id]
       );
       if (!reviews || reviews.length === 0) {
         return res.status(404).json({ success: false, message: 'Avaliação não encontrada' });
@@ -64,7 +68,7 @@ export class ReviewController {
       }
       const reviewId = require('crypto').randomUUID();
       await query(
-        'INSERT INTO avaliacoes (id, pedido_id, usuario_id, nota, comentario) VALUES (?, ?, ?, ?, ?)',
+        'INSERT INTO avaliacoes (id, pedido_id, usuario_id, nota, comentario) VALUES ($1, $2, $3, $4, $5)',
         [reviewId, pedido_id, usuario_id, nota, comentario || null]
       );
       return res.status(201).json({ success: true, message: 'Avaliação criada com sucesso', data: { id: reviewId } });
@@ -81,7 +85,7 @@ export class ReviewController {
       if (!resposta_restaurante) {
         return res.status(400).json({ success: false, message: 'Resposta não pode estar vazia' });
       }
-      await query('UPDATE avaliacoes SET resposta_restaurante = ? WHERE id = ?', [resposta_restaurante, id]);
+      await query('UPDATE avaliacoes SET resposta_restaurante = $1 WHERE id = $2', [resposta_restaurante, id]);
       return res.json({ success: true, message: 'Resposta registrada com sucesso' });
     } catch (error: any) {
       Logger.error('Erro ao responder avaliação:', error);
@@ -92,8 +96,8 @@ export class ReviewController {
   static async getOrderReview(req: Request, res: Response) {
     try {
       const { orderId } = req.params;
-      const [reviews] = await query<any[]>(
-        'SELECT * FROM avaliacoes WHERE pedido_id = ?', [orderId]
+      const reviews = await query<any[]>(
+        'SELECT * FROM avaliacoes WHERE pedido_id = $1', [orderId]
       );
       res.json({ success: true, data: reviews?.[0] || null });
     } catch (error: any) {

@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable comma-dangle */
+/* eslint-disable quotes */
 import { Request, Response, NextFunction } from 'express';
 import { query } from '../config/database';
 import { Mesa, ApiResponse } from '../types';
@@ -18,17 +21,21 @@ export class TableController {
 
             let sql = 'SELECT * FROM mesas WHERE 1=1';
             const params: any[] = [];
+            let paramCount = 0;
 
             if (ativa !== undefined) {
-                sql += ' AND ativa = ?';
+                paramCount++;
+                sql += ` AND ativa = $${paramCount}`;
                 params.push(ativa === 'true');
             }
             if (tipo) {
-                sql += ' AND tipo = ?';
+                paramCount++;
+                sql += ` AND tipo = $${paramCount}`;
                 params.push(tipo);
             }
             if (localizacao) {
-                sql += ' AND localizacao LIKE ?';
+                paramCount++;
+                sql += ` AND localizacao LIKE $${paramCount}`;
                 params.push(`%${localizacao}%`);
             }
 
@@ -56,12 +63,12 @@ export class TableController {
           r.hora_reserva, r.status as status_reserva, r.ocasiao_especial,
           CASE 
             WHEN r.status = 'em_andamento' THEN 'ocupada'
-            WHEN r.status = 'confirmada' AND r.data_reserva = ? THEN 'reservada'
+            WHEN r.status = 'confirmada' AND r.data_reserva = $1 THEN 'reservada'
             ELSE 'disponivel'
           END as status_mesa
         FROM mesas m
         LEFT JOIN reservas r ON m.id = r.mesa_id 
-          AND r.data_reserva = ?
+          AND r.data_reserva = $2
           AND r.status IN ('confirmada', 'em_andamento')
         WHERE m.ativa = TRUE
         ORDER BY m.numero ASC`,
@@ -80,13 +87,13 @@ export class TableController {
             if (!numero || !capacidade) throw new BadRequestError('Número e capacidade são obrigatórios');
             if (capacidade < 1) throw new BadRequestError('Capacidade deve ser maior que zero');
 
-            const existing = await query<Mesa[]>('SELECT id FROM mesas WHERE numero = ?', [numero]);
+            const existing = await query<Mesa[]>('SELECT id FROM mesas WHERE numero = $1', [numero]);
             if (existing.length > 0) throw new BadRequestError('Já existe uma mesa com este número');
 
             const mesaId = uuidv4();
             await query(
                 `INSERT INTO mesas (id, numero, capacidade, localizacao, tipo, observacoes, ativa)
-         VALUES (?, ?, ?, ?, ?, ?, TRUE)`,
+         VALUES ($1, $2, $3, $4, $5, $6, TRUE)`,
                 [mesaId, numero, capacidade, localizacao || null, tipo || 'normal', observacoes || null]
             );
 
@@ -100,22 +107,23 @@ export class TableController {
         try {
             const { id } = req.params;
             const { numero, capacidade, localizacao, tipo, observacoes } = req.body;
-            const [mesa] = await query<Mesa[]>('SELECT id FROM mesas WHERE id = ?', [id]);
-            if (!mesa) throw new NotFoundError('Mesa');
+            
+            const mesaResult = await query<Mesa[]>('SELECT id FROM mesas WHERE id = $1', [id]);
+            if (!mesaResult[0]) throw new NotFoundError('Mesa');
 
             if (numero) {
-                const existing = await query<Mesa[]>('SELECT id FROM mesas WHERE numero = ? AND id != ?', [numero, id]);
+                const existing = await query<Mesa[]>('SELECT id FROM mesas WHERE numero = $1 AND id != $2', [numero, id]);
                 if (existing.length > 0) throw new BadRequestError('Já existe uma mesa com este número');
             }
 
             await query(
                 `UPDATE mesas SET 
-         numero = COALESCE(?, numero),
-         capacidade = COALESCE(?, capacidade),
-         localizacao = COALESCE(?, localizacao),
-         tipo = COALESCE(?, tipo),
-         observacoes = COALESCE(?, observacoes)
-         WHERE id = ?`,
+         numero = COALESCE($1, numero),
+         capacidade = COALESCE($2, capacidade),
+         localizacao = COALESCE($3, localizacao),
+         tipo = COALESCE($4, tipo),
+         observacoes = COALESCE($5, observacoes)
+         WHERE id = $6`,
                 [numero, capacidade, localizacao, tipo, observacoes, id]
             );
 
@@ -129,7 +137,7 @@ export class TableController {
         try {
             const { id } = req.params;
             const { ativa } = req.body;
-            await query('UPDATE mesas SET ativa = ? WHERE id = ?', [ativa, id]);
+            await query('UPDATE mesas SET ativa = $1 WHERE id = $2', [ativa, id]);
             res.json({ success: true, message: `Mesa ${ativa ? 'ativada' : 'desativada'} com sucesso` });
         } catch (error) {
             next(error);
@@ -139,10 +147,13 @@ export class TableController {
     static async deleteTable(req: Request, res: Response<ApiResponse>, next: NextFunction) {
         try {
             const { id } = req.params;
-            const reservas = await query<any[]>(`SELECT id FROM reservas WHERE mesa_id = ? AND data_reserva >= CURDATE() AND status IN ('pendente', 'confirmada')`, [id]);
+            const reservas = await query<any[]>(
+                `SELECT id FROM reservas WHERE mesa_id = $1 AND data_reserva >= CURRENT_DATE AND status IN ('pendente', 'confirmada')`, 
+                [id]
+            );
             if (reservas.length > 0) throw new BadRequestError('Não é possível deletar mesa com reservas futuras');
 
-            await query('DELETE FROM mesas WHERE id = ?', [id]);
+            await query('DELETE FROM mesas WHERE id = $1', [id]);
             res.json({ success: true, message: 'Mesa deletada com sucesso' });
         } catch (error) {
             next(error);
