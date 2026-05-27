@@ -40,9 +40,11 @@ const EnvSchema = z.object({
     // SMTP (opcional)
     SMTP_HOST: z.string().optional(),
     SMTP_PORT: z.coerce.number().optional(),
+    SMTP_SECURE: z.string().optional(),
     SMTP_USER: z.string().optional(),
     SMTP_PASS: z.string().optional(),
     SMTP_FROM: z.string().optional(),
+    SMTP_FROM_NAME: z.string().optional(),
 
     // SMS (opcional)
     SMS_PROVIDER: z.string().optional(),
