@@ -110,3 +110,19 @@ Thumbs.db
 # Uploads locais (se aplicável)
 uploads/
 public/uploads/
+
+# Environment
+.env
+.env.production
+.env.local
+
+# Logs
+logs/
+*.log
+
+# Uploads
+uploads/
+
+# Node
+node_modules/
+dist/

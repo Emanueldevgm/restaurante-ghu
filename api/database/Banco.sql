@@ -1,571 +1,521 @@
-CREATE DATABASE  IF NOT EXISTS `restaurante_angola_db` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
-USE `restaurante_angola_db`;
--- MySQL dump 10.13  Distrib 8.0.42, for Win64 (x86_64)
---
--- Host: 127.0.0.1    Database: restaurante_angola_db
--- ------------------------------------------------------
--- Server version	9.7.0
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!50503 SET NAMES utf8 */;
-/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
-/*!40103 SET TIME_ZONE='+00:00' */;
-/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-SET @MYSQLDUMP_TEMP_LOG_BIN = @@SESSION.SQL_LOG_BIN;
-SET @@SESSION.SQL_LOG_BIN= 0;
-
---
--- GTID state at the beginning of the backup 
---
-
-SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ '32cad838-425d-11f1-8f95-002b6746be33:1-142';
-
---
--- Table structure for table `avaliacoes`
---
-
-DROP TABLE IF EXISTS `avaliacoes`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `avaliacoes` (
-  `id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `pedido_id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `usuario_id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `nota` int NOT NULL,
-  `comentario` text COLLATE utf8mb4_general_ci,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `pedido_id` (`pedido_id`),
-  KEY `usuario_id` (`usuario_id`),
-  CONSTRAINT `avaliacoes_ibfk_1` FOREIGN KEY (`pedido_id`) REFERENCES `pedidos` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `avaliacoes_ibfk_2` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `avaliacoes_chk_1` CHECK (((`nota` >= 1) and (`nota` <= 5)))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `avaliacoes`
---
-
-LOCK TABLES `avaliacoes` WRITE;
-/*!40000 ALTER TABLE `avaliacoes` DISABLE KEYS */;
-/*!40000 ALTER TABLE `avaliacoes` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `categorias`
---
-
-DROP TABLE IF EXISTS `categorias`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `categorias` (
-  `id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `nome` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
-  `nome_en` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `descricao` text COLLATE utf8mb4_general_ci,
-  `imagem` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `ordem_exibicao` int DEFAULT '0',
-  `ativo` tinyint(1) DEFAULT '1',
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `categorias`
---
-
-LOCK TABLES `categorias` WRITE;
-/*!40000 ALTER TABLE `categorias` DISABLE KEYS */;
-/*!40000 ALTER TABLE `categorias` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `configuracoes_restaurante`
---
-
-DROP TABLE IF EXISTS `configuracoes_restaurante`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `configuracoes_restaurante` (
-  `id` int NOT NULL DEFAULT '1',
-  `nome_restaurante` varchar(100) COLLATE utf8mb4_general_ci DEFAULT 'Restaurante GHU',
-  `taxa_entrega_base_kz` decimal(10,2) DEFAULT '1000.00',
-  `tempo_preparo_padrao_min` int DEFAULT '30',
-  `pedido_minimo_delivery_kz` decimal(10,2) DEFAULT '0.00',
-  `aberto` tinyint(1) DEFAULT '1',
-  `horario_funcionamento` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
-  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  CONSTRAINT `configuracoes_restaurante_chk_1` CHECK (json_valid(`horario_funcionamento`))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `configuracoes_restaurante`
---
-
-LOCK TABLES `configuracoes_restaurante` WRITE;
-/*!40000 ALTER TABLE `configuracoes_restaurante` DISABLE KEYS */;
-INSERT INTO `configuracoes_restaurante` VALUES (1,'Restaurante GHU',1000.00,30,0.00,1,NULL,'2026-04-08 19:21:17');
-/*!40000 ALTER TABLE `configuracoes_restaurante` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `cupons`
---
-
-DROP TABLE IF EXISTS `cupons`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `cupons` (
-  `id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `codigo` varchar(20) COLLATE utf8mb4_general_ci NOT NULL,
-  `tipo` enum('percentual','fixo') COLLATE utf8mb4_general_ci NOT NULL,
-  `valor` decimal(10,2) NOT NULL,
-  `valor_minimo_pedido_kz` decimal(10,2) DEFAULT '0.00',
-  `quantidade_disponivel` int DEFAULT NULL,
-  `quantidade_usada` int DEFAULT '0',
-  `data_inicio` date NOT NULL,
-  `data_fim` date NOT NULL,
-  `status` enum('ativo','inativo') COLLATE utf8mb4_general_ci DEFAULT 'ativo',
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `codigo` (`codigo`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `cupons`
---
-
-LOCK TABLES `cupons` WRITE;
-/*!40000 ALTER TABLE `cupons` DISABLE KEYS */;
-/*!40000 ALTER TABLE `cupons` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `cupons_utilizados`
---
-
-DROP TABLE IF EXISTS `cupons_utilizados`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `cupons_utilizados` (
-  `id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `cupom_id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `pedido_id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `usuario_id` varchar(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `valor_desconto_kz` decimal(10,2) NOT NULL,
-  `used_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `cupom_id` (`cupom_id`),
-  KEY `pedido_id` (`pedido_id`),
-  CONSTRAINT `cupons_utilizados_ibfk_1` FOREIGN KEY (`cupom_id`) REFERENCES `cupons` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `cupons_utilizados_ibfk_2` FOREIGN KEY (`pedido_id`) REFERENCES `pedidos` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `cupons_utilizados`
---
-
-LOCK TABLES `cupons_utilizados` WRITE;
-/*!40000 ALTER TABLE `cupons_utilizados` DISABLE KEYS */;
-/*!40000 ALTER TABLE `cupons_utilizados` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `enderecos_clientes`
---
-
-DROP TABLE IF EXISTS `enderecos_clientes`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `enderecos_clientes` (
-  `id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `usuario_id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `nome_endereco` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
-  `provincia` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
-  `municipio` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
-  `bairro` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `rua` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `numero` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `condominio` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `apartamento` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `ponto_referencia` text COLLATE utf8mb4_general_ci,
-  `coordenadas_gps` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `principal` tinyint(1) DEFAULT '0',
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `usuario_id` (`usuario_id`),
-  CONSTRAINT `enderecos_clientes_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `enderecos_clientes`
---
-
-LOCK TABLES `enderecos_clientes` WRITE;
-/*!40000 ALTER TABLE `enderecos_clientes` DISABLE KEYS */;
-/*!40000 ALTER TABLE `enderecos_clientes` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `itens_cardapio`
---
-
-DROP TABLE IF EXISTS `itens_cardapio`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `itens_cardapio` (
-  `id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `categoria_id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `nome` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `nome_en` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `descricao` text COLLATE utf8mb4_general_ci,
-  `preco_kz` decimal(10,2) NOT NULL,
-  `preco_promocional_kz` decimal(10,2) DEFAULT NULL,
-  `tempo_preparo` int DEFAULT NULL,
-  `calorias` int DEFAULT NULL,
-  `vegetariano` tinyint(1) DEFAULT '0',
-  `vegano` tinyint(1) DEFAULT '0',
-  `sem_gluten` tinyint(1) DEFAULT '0',
-  `picante` tinyint(1) DEFAULT '0',
-  `status` enum('disponivel','indisponivel','esgotado') COLLATE utf8mb4_general_ci DEFAULT 'disponivel',
-  `destaque` tinyint(1) DEFAULT '0',
-  `prato_do_dia` tinyint(1) DEFAULT '0',
-  `imagem` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `ordem_exibicao` int DEFAULT '0',
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `categoria_id` (`categoria_id`),
-  CONSTRAINT `itens_cardapio_ibfk_1` FOREIGN KEY (`categoria_id`) REFERENCES `categorias` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `itens_cardapio`
---
-
-LOCK TABLES `itens_cardapio` WRITE;
-/*!40000 ALTER TABLE `itens_cardapio` DISABLE KEYS */;
-/*!40000 ALTER TABLE `itens_cardapio` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `itens_pedido`
---
-
-DROP TABLE IF EXISTS `itens_pedido`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `itens_pedido` (
-  `id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `pedido_id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `item_cardapio_id` varchar(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `nome_item` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `preco_unitario_kz` decimal(10,2) NOT NULL,
-  `quantidade` int NOT NULL,
-  `subtotal_kz` decimal(10,2) NOT NULL,
-  `observacoes` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `pedido_id` (`pedido_id`),
-  KEY `item_cardapio_id` (`item_cardapio_id`),
-  CONSTRAINT `itens_pedido_ibfk_1` FOREIGN KEY (`pedido_id`) REFERENCES `pedidos` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `itens_pedido_ibfk_2` FOREIGN KEY (`item_cardapio_id`) REFERENCES `itens_cardapio` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `itens_pedido`
---
-
-LOCK TABLES `itens_pedido` WRITE;
-/*!40000 ALTER TABLE `itens_pedido` DISABLE KEYS */;
-/*!40000 ALTER TABLE `itens_pedido` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `logs_acesso`
---
-
-DROP TABLE IF EXISTS `logs_acesso`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `logs_acesso` (
-  `id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `usuario_id` varchar(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `metodo` varchar(10) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `url` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `ip` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `user_agent` text COLLATE utf8mb4_general_ci,
-  `status_code` int DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `logs_acesso`
---
-
-LOCK TABLES `logs_acesso` WRITE;
-/*!40000 ALTER TABLE `logs_acesso` DISABLE KEYS */;
-/*!40000 ALTER TABLE `logs_acesso` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `mesas`
---
-
-DROP TABLE IF EXISTS `mesas`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `mesas` (
-  `id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `numero` varchar(10) COLLATE utf8mb4_general_ci NOT NULL,
-  `capacidade` int NOT NULL,
-  `localizacao` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `tipo` enum('normal','vip','familia','casal') COLLATE utf8mb4_general_ci DEFAULT 'normal',
-  `ativa` tinyint(1) DEFAULT '1',
-  `observacoes` text COLLATE utf8mb4_general_ci,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `numero` (`numero`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `mesas`
---
-
-LOCK TABLES `mesas` WRITE;
-/*!40000 ALTER TABLE `mesas` DISABLE KEYS */;
-/*!40000 ALTER TABLE `mesas` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `pagamentos`
---
-
-DROP TABLE IF EXISTS `pagamentos`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `pagamentos` (
-  `id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `pedido_id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `metodo` enum('dinheiro','multicaixa','multicaixa_express','transferencia_bancaria','paypal','unitel_money','atlantico_money') COLLATE utf8mb4_general_ci NOT NULL,
-  `status` enum('pendente','processando','aprovado','recusado','estornado','cancelado') COLLATE utf8mb4_general_ci DEFAULT 'pendente',
-  `valor_pago_kz` decimal(10,2) NOT NULL,
-  `referencia_transacao` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `comprovativo_url` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `pedido_id` (`pedido_id`),
-  CONSTRAINT `pagamentos_ibfk_1` FOREIGN KEY (`pedido_id`) REFERENCES `pedidos` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `pagamentos`
---
-
-LOCK TABLES `pagamentos` WRITE;
-/*!40000 ALTER TABLE `pagamentos` DISABLE KEYS */;
-/*!40000 ALTER TABLE `pagamentos` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `pedidos`
---
-
-DROP TABLE IF EXISTS `pedidos`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `pedidos` (
-  `id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `numero_pedido` int NOT NULL AUTO_INCREMENT,
-  `usuario_id` varchar(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `tipo` enum('entrega','retirada','mesa') COLLATE utf8mb4_general_ci NOT NULL,
-  `status` enum('carrinho','pendente','confirmado','em_preparo','pronto','saiu_entrega','entregue','cancelado') COLLATE utf8mb4_general_ci DEFAULT 'carrinho',
-  `endereco_id` varchar(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `mesa_id` varchar(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `taxa_entrega_kz` decimal(10,2) DEFAULT '0.00',
-  `distancia_km` decimal(5,2) DEFAULT NULL,
-  `subtotal_kz` decimal(10,2) NOT NULL,
-  `desconto_kz` decimal(10,2) DEFAULT '0.00',
-  `total_kz` decimal(10,2) NOT NULL,
-  `observacoes` text COLLATE utf8mb4_general_ci,
-  `observacoes_entrega` text COLLATE utf8mb4_general_ci,
-  `tempo_estimado` int DEFAULT NULL,
-  `data_prevista_entrega` datetime DEFAULT NULL,
-  `reserva_id` varchar(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `cupom_id` varchar(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `confirmado_em` timestamp NULL DEFAULT NULL,
-  `finalizado_em` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `numero_pedido` (`numero_pedido`),
-  KEY `usuario_id` (`usuario_id`),
-  KEY `endereco_id` (`endereco_id`),
-  KEY `mesa_id` (`mesa_id`),
-  KEY `reserva_id` (`reserva_id`),
-  KEY `cupom_id` (`cupom_id`),
-  CONSTRAINT `pedidos_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `pedidos_ibfk_2` FOREIGN KEY (`endereco_id`) REFERENCES `enderecos_clientes` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `pedidos_ibfk_3` FOREIGN KEY (`mesa_id`) REFERENCES `mesas` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `pedidos_ibfk_4` FOREIGN KEY (`reserva_id`) REFERENCES `reservas` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `pedidos_ibfk_5` FOREIGN KEY (`cupom_id`) REFERENCES `cupons` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `pedidos`
---
-
-LOCK TABLES `pedidos` WRITE;
-/*!40000 ALTER TABLE `pedidos` DISABLE KEYS */;
-/*!40000 ALTER TABLE `pedidos` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `reservas`
---
-
-DROP TABLE IF EXISTS `reservas`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `reservas` (
-  `id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `usuario_id` varchar(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `mesa_id` varchar(36) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `nome_cliente` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `telefone_cliente` varchar(20) COLLATE utf8mb4_general_ci NOT NULL,
-  `email_cliente` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `quantidade_pessoas` int NOT NULL,
-  `data_reserva` date NOT NULL,
-  `hora_reserva` time NOT NULL,
-  `status` enum('pendente','confirmada','em_andamento','finalizada','cancelada','nao_compareceu') COLLATE utf8mb4_general_ci DEFAULT 'pendente',
-  `ocasiao_especial` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `observacoes` text COLLATE utf8mb4_general_ci,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `confirmada_em` timestamp NULL DEFAULT NULL,
-  `check_in_em` timestamp NULL DEFAULT NULL,
-  `check_out_em` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `usuario_id` (`usuario_id`),
-  KEY `mesa_id` (`mesa_id`),
-  CONSTRAINT `reservas_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `reservas_ibfk_2` FOREIGN KEY (`mesa_id`) REFERENCES `mesas` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `reservas`
---
-
-LOCK TABLES `reservas` WRITE;
-/*!40000 ALTER TABLE `reservas` DISABLE KEYS */;
-/*!40000 ALTER TABLE `reservas` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `usuarios`
---
-
-DROP TABLE IF EXISTS `usuarios`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `usuarios` (
-  `id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `nome_completo` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `email` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `telefone` varchar(20) COLLATE utf8mb4_general_ci NOT NULL,
-  `telefone_alternativo` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `senha_hash` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
-  `bi` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `nif` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `role` enum('cliente','administrador','garcom','cozinha','entregador','gerente') COLLATE utf8mb4_general_ci DEFAULT 'cliente',
-  `status` enum('ativo','inativo','bloqueado') COLLATE utf8mb4_general_ci DEFAULT 'ativo',
-  `foto_perfil` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `data_nascimento` date DEFAULT NULL,
-  `genero` enum('masculino','feminino','outro') COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `ultimo_acesso` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `telefone` (`telefone`),
-  UNIQUE KEY `email` (`email`),
-  UNIQUE KEY `bi` (`bi`),
-  UNIQUE KEY `nif` (`nif`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `usuarios`
---
-
-LOCK TABLES `usuarios` WRITE;
-/*!40000 ALTER TABLE `usuarios` DISABLE KEYS */;
-INSERT INTO `usuarios` VALUES ('b85f3d54-42a5-11f1-a603-002b6746be33','Administrador Principal','admin@restauranteghu.com','900000000',NULL,'$2a$10$eczn.ZoBbEepRaSDyFnHG.HEbci.lVqIrAtrqVxpie1069eBgyv4y',NULL,NULL,'administrador','ativo',NULL,NULL,NULL,'2026-04-28 01:58:15','2026-04-28 01:58:15',NULL);
-/*!40000 ALTER TABLE `usuarios` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `zonas_entrega`
---
-
-DROP TABLE IF EXISTS `zonas_entrega`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `zonas_entrega` (
-  `id` varchar(36) COLLATE utf8mb4_general_ci NOT NULL,
-  `nome` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `provincia` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
-  `municipios` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
-  `bairros` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
-  `taxa_entrega_kz` decimal(10,2) NOT NULL,
-  `tempo_estimado_min` int DEFAULT NULL,
-  `ativa` tinyint(1) DEFAULT '1',
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  CONSTRAINT `zonas_entrega_chk_1` CHECK (json_valid(`municipios`)),
-  CONSTRAINT `zonas_entrega_chk_2` CHECK (json_valid(`bairros`))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `zonas_entrega`
---
-
-LOCK TABLES `zonas_entrega` WRITE;
-/*!40000 ALTER TABLE `zonas_entrega` DISABLE KEYS */;
-/*!40000 ALTER TABLE `zonas_entrega` ENABLE KEYS */;
-UNLOCK TABLES;
-SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
-/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
-
-/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
-/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
-/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-
--- Dump completed on 2026-04-30 11:28:53
+-- =============================================
+-- RESTAURANTE GHU - PostgreSQL COMPLETO
+-- (Estrutura + Dados + Usuários Atualizados)
+-- Data: 27/05/2026
+-- =============================================
+
+-- Extensões úteis
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- =============================================
+-- FUNÇÃO DE TRIGGER (atualizar updated_at)
+-- =============================================
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =============================================
+-- TABELAS
+-- =============================================
+
+-- 1. USUARIOS
+CREATE TABLE IF NOT EXISTS usuarios (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nome_completo VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE,
+    telefone VARCHAR(20) NOT NULL UNIQUE,
+    telefone_alternativo VARCHAR(20),
+    senha_hash VARCHAR(255) NOT NULL,
+    bi VARCHAR(20) UNIQUE,
+    nif VARCHAR(20) UNIQUE,
+    role VARCHAR(20) DEFAULT 'cliente' CHECK (role IN ('cliente', 'administrador', 'garcom', 'cozinha', 'entregador', 'gerente')),
+    status VARCHAR(20) DEFAULT 'ativo' CHECK (status IN ('ativo', 'inativo', 'bloqueado')),
+    foto_perfil VARCHAR(255),
+    data_nascimento DATE,
+    genero VARCHAR(20) CHECK (genero IN ('masculino', 'feminino', 'outro')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ultimo_acesso TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_usuarios_updated_at ON usuarios;
+CREATE TRIGGER update_usuarios_updated_at
+    BEFORE UPDATE ON usuarios
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- 2. CATEGORIAS
+CREATE TABLE IF NOT EXISTS categorias (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nome VARCHAR(50) NOT NULL,
+    nome_en VARCHAR(50),
+    descricao TEXT,
+    imagem VARCHAR(255),
+    ordem_exibicao INTEGER DEFAULT 0,
+    ativo BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_categorias_updated_at ON categorias;
+CREATE TRIGGER update_categorias_updated_at
+    BEFORE UPDATE ON categorias
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- 3. ITENS_CARDAPIO
+CREATE TABLE IF NOT EXISTS itens_cardapio (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    categoria_id UUID REFERENCES categorias(id) ON DELETE CASCADE,
+    nome VARCHAR(100) NOT NULL,
+    nome_en VARCHAR(100),
+    descricao TEXT,
+    preco_kz DECIMAL(10,2) NOT NULL,
+    preco_promocional_kz DECIMAL(10,2),
+    tempo_preparo INTEGER,
+    calorias INTEGER,
+    vegetariano BOOLEAN DEFAULT FALSE,
+    vegano BOOLEAN DEFAULT FALSE,
+    sem_gluten BOOLEAN DEFAULT FALSE,
+    picante BOOLEAN DEFAULT FALSE,
+    status VARCHAR(20) DEFAULT 'disponivel' CHECK (status IN ('disponivel', 'indisponivel', 'esgotado')),
+    destaque BOOLEAN DEFAULT FALSE,
+    prato_do_dia BOOLEAN DEFAULT FALSE,
+    imagem VARCHAR(255),
+    ordem_exibicao INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_itens_cardapio_updated_at ON itens_cardapio;
+CREATE TRIGGER update_itens_cardapio_updated_at
+    BEFORE UPDATE ON itens_cardapio
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- 4. ENDERECOS_CLIENTES
+CREATE TABLE IF NOT EXISTS enderecos_clientes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    nome_endereco VARCHAR(50) NOT NULL,
+    provincia VARCHAR(50) NOT NULL,
+    municipio VARCHAR(50) NOT NULL,
+    bairro VARCHAR(100) NOT NULL,
+    rua VARCHAR(100) NOT NULL,
+    numero VARCHAR(20),
+    condominio VARCHAR(100),
+    apartamento VARCHAR(50),
+    ponto_referencia TEXT,
+    coordenadas_gps VARCHAR(50),
+    principal BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_enderecos_clientes_updated_at ON enderecos_clientes;
+CREATE TRIGGER update_enderecos_clientes_updated_at
+    BEFORE UPDATE ON enderecos_clientes
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- 5. MESAS
+CREATE TABLE IF NOT EXISTS mesas (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    numero VARCHAR(10) NOT NULL UNIQUE,
+    capacidade INTEGER NOT NULL,
+    localizacao VARCHAR(50),
+    tipo VARCHAR(20) DEFAULT 'normal' CHECK (tipo IN ('normal', 'vip', 'familia', 'casal')),
+    ativa BOOLEAN DEFAULT TRUE,
+    observacoes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 6. RESERVAS
+CREATE TABLE IF NOT EXISTS reservas (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    usuario_id UUID REFERENCES usuarios(id) ON DELETE SET NULL,
+    mesa_id UUID REFERENCES mesas(id) ON DELETE SET NULL,
+    nome_cliente VARCHAR(100) NOT NULL,
+    telefone_cliente VARCHAR(20) NOT NULL,
+    email_cliente VARCHAR(100),
+    quantidade_pessoas INTEGER NOT NULL,
+    data_reserva DATE NOT NULL,
+    hora_reserva TIME NOT NULL,
+    status VARCHAR(20) DEFAULT 'pendente' CHECK (status IN ('pendente', 'confirmada', 'em_andamento', 'finalizada', 'cancelada', 'nao_compareceu')),
+    ocasiao_especial VARCHAR(100),
+    observacoes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    confirmada_em TIMESTAMP,
+    check_in_em TIMESTAMP,
+    check_out_em TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_reservas_updated_at ON reservas;
+CREATE TRIGGER update_reservas_updated_at
+    BEFORE UPDATE ON reservas
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- 7. CUPONS
+CREATE TABLE IF NOT EXISTS cupons (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    codigo VARCHAR(20) NOT NULL UNIQUE,
+    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('percentual', 'fixo')),
+    valor DECIMAL(10,2) NOT NULL,
+    valor_minimo_pedido_kz DECIMAL(10,2) DEFAULT 0.00,
+    quantidade_disponivel INTEGER,
+    quantidade_usada INTEGER DEFAULT 0,
+    data_inicio DATE NOT NULL,
+    data_fim DATE NOT NULL,
+    status VARCHAR(20) DEFAULT 'ativo' CHECK (status IN ('ativo', 'inativo')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 8. ZONAS_ENTREGA
+CREATE TABLE IF NOT EXISTS zonas_entrega (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nome VARCHAR(100) NOT NULL,
+    provincia VARCHAR(50) NOT NULL,
+    municipios JSONB,
+    bairros JSONB,
+    taxa_entrega_kz DECIMAL(10,2) NOT NULL,
+    tempo_estimado_min INTEGER,
+    ativa BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 9. CONFIGURACOES_RESTAURANTE
+CREATE TABLE IF NOT EXISTS configuracoes_restaurante (
+    id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    nome_restaurante VARCHAR(100) DEFAULT 'Restaurante GHU',
+    taxa_entrega_base_kz DECIMAL(10,2) DEFAULT 1000.00,
+    tempo_preparo_padrao_min INTEGER DEFAULT 30,
+    pedido_minimo_delivery_kz DECIMAL(10,2) DEFAULT 0.00,
+    aberto BOOLEAN DEFAULT TRUE,
+    horario_funcionamento JSONB,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_configuracoes_updated_at ON configuracoes_restaurante;
+CREATE TRIGGER update_configuracoes_updated_at
+    BEFORE UPDATE ON configuracoes_restaurante
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- 10. PEDIDOS
+CREATE TABLE IF NOT EXISTS pedidos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    numero_pedido SERIAL UNIQUE,
+    usuario_id UUID REFERENCES usuarios(id) ON DELETE SET NULL,
+    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('entrega', 'retirada', 'mesa')),
+    status VARCHAR(20) DEFAULT 'carrinho' CHECK (status IN ('carrinho', 'pendente', 'confirmado', 'em_preparo', 'pronto', 'saiu_entrega', 'entregue', 'cancelado')),
+    endereco_id UUID REFERENCES enderecos_clientes(id) ON DELETE SET NULL,
+    mesa_id UUID REFERENCES mesas(id) ON DELETE SET NULL,
+    taxa_entrega_kz DECIMAL(10,2) DEFAULT 0.00,
+    distancia_km DECIMAL(5,2),
+    subtotal_kz DECIMAL(10,2) NOT NULL,
+    desconto_kz DECIMAL(10,2) DEFAULT 0.00,
+    total_kz DECIMAL(10,2) NOT NULL,
+    observacoes TEXT,
+    observacoes_entrega TEXT,
+    tempo_estimado INTEGER,
+    data_prevista_entrega TIMESTAMP,
+    reserva_id UUID REFERENCES reservas(id) ON DELETE SET NULL,
+    cupom_id UUID REFERENCES cupons(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    confirmado_em TIMESTAMP,
+    finalizado_em TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_pedidos_updated_at ON pedidos;
+CREATE TRIGGER update_pedidos_updated_at
+    BEFORE UPDATE ON pedidos
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- 11. ITENS_PEDIDO
+CREATE TABLE IF NOT EXISTS itens_pedido (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    pedido_id UUID NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
+    item_cardapio_id UUID REFERENCES itens_cardapio(id) ON DELETE SET NULL,
+    nome_item VARCHAR(100) NOT NULL,
+    preco_unitario_kz DECIMAL(10,2) NOT NULL,
+    quantidade INTEGER NOT NULL,
+    subtotal_kz DECIMAL(10,2) NOT NULL,
+    observacoes VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 12. PAGAMENTOS
+CREATE TABLE IF NOT EXISTS pagamentos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    pedido_id UUID NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
+    metodo VARCHAR(30) NOT NULL CHECK (metodo IN ('dinheiro', 'multicaixa', 'multicaixa_express', 'transferencia_bancaria', 'paypal', 'unitel_money', 'atlantico_money')),
+    status VARCHAR(20) DEFAULT 'pendente' CHECK (status IN ('pendente', 'processando', 'aprovado', 'recusado', 'estornado', 'cancelado')),
+    valor_pago_kz DECIMAL(10,2) NOT NULL,
+    referencia_transacao VARCHAR(100),
+    comprovativo_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_pagamentos_updated_at ON pagamentos;
+CREATE TRIGGER update_pagamentos_updated_at
+    BEFORE UPDATE ON pagamentos
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- 13. AVALIACOES
+CREATE TABLE IF NOT EXISTS avaliacoes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    pedido_id UUID NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    nota INTEGER NOT NULL CHECK (nota >= 1 AND nota <= 5),
+    comentario TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 14. CUPONS_UTILIZADOS
+CREATE TABLE IF NOT EXISTS cupons_utilizados (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    cupom_id UUID NOT NULL REFERENCES cupons(id) ON DELETE CASCADE,
+    pedido_id UUID NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
+    usuario_id UUID,
+    valor_desconto_kz DECIMAL(10,2) NOT NULL,
+    used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 15. LOGS_ACESSO
+CREATE TABLE IF NOT EXISTS logs_acesso (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    usuario_id UUID,
+    metodo VARCHAR(10),
+    url VARCHAR(255),
+    ip VARCHAR(45),
+    user_agent TEXT,
+    status_code INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 16. PONTOS_FIDELIDADE
+CREATE TABLE IF NOT EXISTS pontos_fidelidade (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    pontos INTEGER NOT NULL,
+    data_expiracao DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 17. PASSWORD_RESETS
+CREATE TABLE IF NOT EXISTS password_resets (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(100) NOT NULL,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- ÍNDICES
+-- =============================================
+
+CREATE INDEX IF NOT EXISTS idx_avaliacoes_pedido ON avaliacoes(pedido_id);
+CREATE INDEX IF NOT EXISTS idx_avaliacoes_usuario ON avaliacoes(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_cupons_utilizados_cupom ON cupons_utilizados(cupom_id);
+CREATE INDEX IF NOT EXISTS idx_cupons_utilizados_pedido ON cupons_utilizados(pedido_id);
+CREATE INDEX IF NOT EXISTS idx_enderecos_usuario ON enderecos_clientes(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_itens_cardapio_categoria ON itens_cardapio(categoria_id);
+CREATE INDEX IF NOT EXISTS idx_itens_pedido_pedido ON itens_pedido(pedido_id);
+CREATE INDEX IF NOT EXISTS idx_itens_pedido_item ON itens_pedido(item_cardapio_id);
+CREATE INDEX IF NOT EXISTS idx_pagamentos_pedido ON pagamentos(pedido_id);
+CREATE INDEX IF NOT EXISTS idx_pedidos_usuario ON pedidos(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_pedidos_endereco ON pedidos(endereco_id);
+CREATE INDEX IF NOT EXISTS idx_pedidos_mesa ON pedidos(mesa_id);
+CREATE INDEX IF NOT EXISTS idx_pedidos_reserva ON pedidos(reserva_id);
+CREATE INDEX IF NOT EXISTS idx_pedidos_cupom ON pedidos(cupom_id);
+CREATE INDEX IF NOT EXISTS idx_pedidos_status ON pedidos(status);
+CREATE INDEX IF NOT EXISTS idx_pedidos_created_at ON pedidos(created_at);
+CREATE INDEX IF NOT EXISTS idx_reservas_usuario ON reservas(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_reservas_mesa ON reservas(mesa_id);
+CREATE INDEX IF NOT EXISTS idx_reservas_data ON reservas(data_reserva);
+CREATE INDEX IF NOT EXISTS idx_pontos_fidelidade_usuario ON pontos_fidelidade(usuario_id);
+
+-- =============================================
+-- FUNÇÕES E PROCEDURES
+-- =============================================
+
+CREATE OR REPLACE FUNCTION buscar_pedidos_por_status(status_busca VARCHAR)
+RETURNS TABLE (
+    id UUID, numero_pedido INTEGER, usuario_id UUID, tipo VARCHAR(20), status VARCHAR(20),
+    endereco_id UUID, mesa_id UUID, taxa_entrega_kz DECIMAL(10,2), distancia_km DECIMAL(5,2),
+    subtotal_kz DECIMAL(10,2), desconto_kz DECIMAL(10,2), total_kz DECIMAL(10,2),
+    observacoes TEXT, observacoes_entrega TEXT, tempo_estimado INTEGER,
+    data_prevista_entrega TIMESTAMP, reserva_id UUID, cupom_id UUID,
+    created_at TIMESTAMP, updated_at TIMESTAMP, confirmado_em TIMESTAMP, finalizado_em TIMESTAMP,
+    cliente_nome VARCHAR, cliente_telefone VARCHAR, cliente_email VARCHAR, localizacao TEXT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT p.id, p.numero_pedido, p.usuario_id, p.tipo, p.status,
+        p.endereco_id, p.mesa_id, p.taxa_entrega_kz, p.distancia_km,
+        p.subtotal_kz, p.desconto_kz, p.total_kz, p.observacoes, p.observacoes_entrega,
+        p.tempo_estimado, p.data_prevista_entrega, p.reserva_id, p.cupom_id,
+        p.created_at, p.updated_at, p.confirmado_em, p.finalizado_em,
+        u.nome_completo::VARCHAR, u.telefone::VARCHAR, u.email::VARCHAR,
+        CASE WHEN p.tipo = 'entrega' THEN CONCAT(ec.bairro, ', ', ec.municipio, ' - ', ec.provincia)
+             WHEN p.tipo = 'mesa' THEN CONCAT('Mesa ', m.numero)
+             ELSE 'Retirada' END::TEXT
+    FROM pedidos p
+    LEFT JOIN usuarios u ON p.usuario_id = u.id
+    LEFT JOIN enderecos_clientes ec ON p.endereco_id = ec.id
+    LEFT JOIN mesas m ON p.mesa_id = m.id
+    WHERE p.status = status_busca
+    ORDER BY p.created_at DESC;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION calcular_taxa_entrega(
+    provincia_param VARCHAR, municipio_param VARCHAR, bairro_param VARCHAR,
+    OUT taxa_kz DECIMAL(12,2), OUT tempo_estimado INTEGER
+) AS $$
+DECLARE taxa_base DECIMAL(10,2);
+BEGIN
+    SELECT ze.taxa_entrega_kz, ze.tempo_estimado_min
+    INTO taxa_kz, tempo_estimado
+    FROM zonas_entrega ze
+    WHERE ze.provincia = provincia_param AND ze.ativa = TRUE
+        AND (ze.municipios @> to_jsonb(municipio_param) OR ze.municipios IS NULL OR jsonb_array_length(ze.municipios) = 0)
+        AND (ze.bairros @> to_jsonb(bairro_param) OR ze.bairros IS NULL OR jsonb_array_length(ze.bairros) = 0)
+    ORDER BY COALESCE(jsonb_array_length(ze.bairros), 0) DESC, COALESCE(jsonb_array_length(ze.municipios), 0) DESC
+    LIMIT 1;
+    
+    IF taxa_kz IS NULL THEN
+        SELECT taxa_entrega_base_kz INTO taxa_kz FROM configuracoes_restaurante LIMIT 1;
+        tempo_estimado := 45;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION estatisticas_dia(data_referencia DATE)
+RETURNS TABLE (
+    total_pedidos BIGINT, pedidos_concluidos BIGINT, pedidos_cancelados BIGINT,
+    faturamento_kz DECIMAL(10,2), ticket_medio_kz DECIMAL, clientes_atendidos BIGINT,
+    entregas BIGINT, mesas_atendidas BIGINT, retiradas BIGINT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT COUNT(*),
+        SUM(CASE WHEN status = 'entregue' THEN 1 ELSE 0 END),
+        SUM(CASE WHEN status = 'cancelado' THEN 1 ELSE 0 END),
+        SUM(CASE WHEN status NOT IN ('cancelado', 'carrinho') THEN total_kz ELSE 0 END),
+        AVG(CASE WHEN status NOT IN ('cancelado', 'carrinho') THEN total_kz ELSE NULL END),
+        COUNT(DISTINCT usuario_id),
+        SUM(CASE WHEN tipo = 'entrega' THEN 1 ELSE 0 END),
+        SUM(CASE WHEN tipo = 'mesa' THEN 1 ELSE 0 END),
+        SUM(CASE WHEN tipo = 'retirada' THEN 1 ELSE 0 END)
+    FROM pedidos WHERE DATE(created_at) = data_referencia;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION obter_saldo_pontos(
+    usuario_param UUID, OUT saldo_total INTEGER, OUT pontos_a_expirar INTEGER, OUT data_proxima_expiracao DATE
+) AS $$
+BEGIN
+    SELECT COALESCE(SUM(pontos), 0) INTO saldo_total FROM pontos_fidelidade WHERE usuario_id = usuario_param;
+    SELECT COALESCE(SUM(pontos), 0), MIN(data_expiracao)
+    INTO pontos_a_expirar, data_proxima_expiracao
+    FROM pontos_fidelidade
+    WHERE usuario_id = usuario_param AND pontos > 0
+        AND data_expiracao BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days';
+END;
+$$ LANGUAGE plpgsql;
+
+-- =============================================
+-- DADOS INICIAIS
+-- =============================================
+
+-- Configuração do restaurante
+INSERT INTO configuracoes_restaurante (nome_restaurante, taxa_entrega_base_kz, tempo_preparo_padrao_min)
+VALUES ('Restaurante GHU', 1000.00, 30)
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================
+-- USUÁRIOS (COM SENHAS ATUALIZADAS)
+-- =============================================
+
+-- Limpar usuários existentes para evitar conflitos (opcional - comenta se não quiseres)
+-- DELETE FROM usuarios;
+
+-- Admin 1 - Senha: admin123
+INSERT INTO usuarios (nome_completo, email, telefone, senha_hash, role, status)
+VALUES (
+    'Administrador Principal',
+    'admin@restauranteghu.com',
+    '900000000',
+    '$2a$10$Hq0I9THhVCBzT3O2qtR2vOF3lLvvDi.BOKHMcehsC5KgHajtnUtq6',
+    'administrador',
+    'ativo'
+) ON CONFLICT (email) DO UPDATE SET senha_hash = '$2a$10$Hq0I9THhVCBzT3O2qtR2vOF3lLvvDi.BOKHMcehsC5KgHajtnUtq6';
+
+-- Admin 2 - Senha: 123456
+INSERT INTO usuarios (nome_completo, email, telefone, senha_hash, role, status)
+VALUES (
+    'Administrador Principal',
+    'admin@rest.com',
+    '900000001',
+    '$2a$10$lejU2qZwNUFICUoFrGTSgOknFKtPwkI36EhP/b.nQ0gtXk3AO632S',
+    'administrador',
+    'ativo'
+) ON CONFLICT (email) DO UPDATE SET senha_hash = '$2a$10$lejU2qZwNUFICUoFrGTSgOknFKtPwkI36EhP/b.nQ0gtXk3AO632S';
+
+-- Cliente - Senha: cliente123
+INSERT INTO usuarios (nome_completo, email, telefone, senha_hash, role, status)
+VALUES (
+    'eminova tech',
+    'eminovatech931@gmail.com',
+    '931441110',
+    '$2a$10$f4vtKRZtKCgQp7BkDV3Id.i4YJSQr2EyeEPS9jOmhSRCs8JnxHF8W',
+    'cliente',
+    'ativo'
+) ON CONFLICT (email) DO UPDATE SET senha_hash = '$2a$10$f4vtKRZtKCgQp7BkDV3Id.i4YJSQr2EyeEPS9jOmhSRCs8JnxHF8W';
+
+-- =============================================
+-- CATEGORIAS
+-- =============================================
+
+INSERT INTO categorias (nome, nome_en, descricao, ordem_exibicao, ativo) VALUES
+('Entradas', 'Starters', 'Pratos leves para começar a refeição', 1, TRUE),
+('Pratos Principais', 'Main Courses', 'Pratos tradicionais angolanos e internacionais', 2, TRUE),
+('Grelhados', 'Grilled', 'Carnes e peixes grelhados na brasa', 3, TRUE),
+('Bebidas', 'Drinks', 'Sumos, refrigerantes, cervejas e vinhos', 4, TRUE),
+('Sobremesas', 'Desserts', 'Doces tradicionais e sobremesas especiais', 5, TRUE),
+('Petiscos', 'Snacks', 'Petiscos e aperitivos para partilhar', 6, TRUE),
+('Menu Infantil', 'Kids Menu', 'Pratos especiais para os mais pequenos', 7, TRUE),
+('Pratos do Dia', 'Daily Specials', 'Pratos especiais disponíveis hoje', 8, TRUE)
+ON CONFLICT DO NOTHING;
+
+-- =============================================
+-- SEQUÊNCIAS
+-- =============================================
+
+SELECT setval('pedidos_numero_pedido_seq', COALESCE((SELECT MAX(numero_pedido) FROM pedidos), 0) + 1);
+
+-- =============================================
+-- MENSAGEM FINAL
+-- =============================================
+
+DO $$
+BEGIN
+    RAISE NOTICE '✅ Base de dados COMPLETA pronta!';
+    RAISE NOTICE '   Usuários: admin@rest.com (123456) | admin@restauranteghu.com (admin123) | eminovatech931@gmail.com (cliente123)';
+    RAISE NOTICE '   Categorias: 8 categorias criadas';
+    RAISE NOTICE '   Tabelas: 17 tabelas + índices + funções';
+END $$;

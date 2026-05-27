@@ -12,12 +12,13 @@ const pool = new Pool({
     database: env.DB_NAME,
     max: 10,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 5000,
+    // SSL para Render (produção)
+    ssl: env.DB_SSL ? { rejectUnauthorized: false } : false,
 });
 
 /**
  * Converte placeholders ? do MySQL para $1, $2, $3 do PostgreSQL
- * Exemplo: "SELECT * FROM usuarios WHERE email = ?" → "SELECT * FROM usuarios WHERE email = $1"
  */
 const formatQuery = (sql: string, params: any[] = []): { text: string; values: any[] } => {
     let index = 0;
@@ -27,7 +28,6 @@ const formatQuery = (sql: string, params: any[] = []): { text: string; values: a
 
 /**
  * Testa a conexão com o banco de dados
- * @returns true se conexão bem-sucedida, false caso contrário
  */
 export const testConnection = async (): Promise<boolean> => {
     try {
@@ -46,10 +46,6 @@ export const testConnection = async (): Promise<boolean> => {
 
 /**
  * Executa uma query no banco de dados
- * Converte automaticamente placeholders ? para $1, $2...
- * @param sql - String SQL a executar (pode usar ? do MySQL)
- * @param params - Array de parâmetros para prepared statement
- * @returns Array de resultados (rows)
  */
 export const query = async <T = any>(sql: string, params: any[] = []): Promise<T> => {
     try {
@@ -62,24 +58,17 @@ export const query = async <T = any>(sql: string, params: any[] = []): Promise<T
     }
 };
 
-/**
- * Tipo para conexão de base de dados (usado em transações)
- */
 export type DatabaseConnection = {
     query: <T = any>(sql: string, params?: any[]) => Promise<T>;
 };
 
 /**
  * Executa operações em uma transação
- * @param callback - Função que recebe a conexão e executa as queries
- * @returns Resultado da transação
  */
 export const transaction = async <T>(
     callback: (connection: DatabaseConnection) => Promise<T>
 ): Promise<T> => {
     const client = await pool.connect();
-
-    // Criar uma conexão com a mesma interface de query
     const connection: DatabaseConnection = {
         query: async <R = any>(sql: string, params: any[] = []): Promise<R> => {
             const { text, values } = formatQuery(sql, params);

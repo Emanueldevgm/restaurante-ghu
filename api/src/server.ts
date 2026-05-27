@@ -1,10 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import app from './app';
 import { testConnection } from './config/database';
 import env from './config/env.config';
 
 const PORT = env.PORT;
 
-// Função para iniciar o servidor
 const startServer = async () => {
     try {
         // Testar conexão com o banco de dados
@@ -22,7 +22,7 @@ const startServer = async () => {
             console.log('🍽️  API RESTAURANTE GHU');
             console.log('==============================================');
             console.log(`✅ Servidor rodando na porta: ${PORT}`);
-            console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+            console.log(`🌍 Ambiente: ${env.NODE_ENV || 'development'}`);
             console.log(`🔗 URL: http://localhost:${PORT}`);
             console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
             console.log('==============================================');
@@ -37,7 +37,6 @@ const startServer = async () => {
 // Handlers de erros não tratados
 process.on('unhandledRejection', (reason: any) => {
     console.error('❌ Unhandled Rejection:', reason);
-    process.exit(1);
 });
 
 process.on('uncaughtException', (error: Error) => {
@@ -45,5 +44,4 @@ process.on('uncaughtException', (error: Error) => {
     process.exit(1);
 });
 
-// Iniciar servidor
 startServer();

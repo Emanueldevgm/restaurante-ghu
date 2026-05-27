@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: restaurante-ghu-api
+    env: node
+    runtime: node
+    rootDir: api
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: DB_HOST
+        value: dpg-d8bc758jo6nc73cl2ntg-a.frankfurt-postgres.render.com
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_USER
+        value: restaurante_angola_db_user
+      - key: DB_PASSWORD
+        value: PwleY6G8fNGYGXzq3uqlrnlWYgWT14Qr
+      - key: DB_NAME
+        value: restaurante_angola_db
+      - key: DB_SSL
+        value: "true"
+      - key: JWT_SECRET
+        value: ghu_restaurante_jwt_secret_2026_producao_segura
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: FRONTEND_URL
+        value: https://restaurante-ghu.vercel.app

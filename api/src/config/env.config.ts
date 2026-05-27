@@ -4,11 +4,11 @@ import dotenv from 'dotenv';
 // Carregar variáveis de ambiente
 dotenv.config();
 
-// Schema de validação das variáveis de ambiente
+// Schema de validação
 const EnvSchema = z.object({
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     PORT: z.coerce.number().default(3001),
-    API_URL: z.string().url().default('http://localhost:3001'),
+    API_URL: z.string().default('http://localhost:3001'),
     
     // Database
     DB_HOST: z.string().default('localhost'),
@@ -16,41 +16,40 @@ const EnvSchema = z.object({
     DB_USER: z.string().default('postgres'),
     DB_PASSWORD: z.string().default(''),
     DB_NAME: z.string().default('restaurante_angola_db'),
+    DB_SSL: z.coerce.boolean().default(false),
     
-    // JWT
-    JWT_SECRET: z.string().min(32, 'JWT_SECRET deve ter pelo menos 32 caracteres'),
+    // JWT - em produção exige 32 caracteres, em dev aceita qualquer
+    JWT_SECRET: z.string().min(1, 'JWT_SECRET é obrigatório'),
     JWT_EXPIRES_IN: z.string().default('7d'),
     JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
     
     // CORS
-    CORS_ORIGIN: z.string().default('http://localhost:5173,http://localhost:3000'),
+    CORS_ORIGIN: z.string().default('*'),
     
     // Files
     MAX_FILE_SIZE: z.coerce.number().default(5242880),
     UPLOAD_PATH: z.string().default('./uploads'),
     
-    // Email
+    // Email (opcional)
     EMAIL_HOST: z.string().optional(),
     EMAIL_PORT: z.coerce.number().optional(),
     EMAIL_USER: z.string().optional(),
     EMAIL_PASSWORD: z.string().optional(),
     EMAIL_FROM: z.string().optional(),
 
-    // SMTP
+    // SMTP (opcional)
     SMTP_HOST: z.string().optional(),
     SMTP_PORT: z.coerce.number().optional(),
-    SMTP_SECURE: z.string().optional(),
     SMTP_USER: z.string().optional(),
     SMTP_PASS: z.string().optional(),
     SMTP_FROM: z.string().optional(),
-    SMTP_FROM_NAME: z.string().optional(),
 
-    // SMS
+    // SMS (opcional)
     SMS_PROVIDER: z.string().optional(),
     SMS_API_KEY: z.string().optional(),
     SMS_SENDER: z.string().optional(),
     
-    // Pagamentos
+    // Pagamentos (opcional)
     MULTICAIXA_ENTITY: z.string().optional(),
     MULTICAIXA_API_KEY: z.string().optional(),
     
@@ -63,10 +62,8 @@ const EnvSchema = z.object({
     LOG_FILE: z.string().default('./logs/app.log'),
 });
 
-// Tipo do objeto de environment
 export type Env = z.infer<typeof EnvSchema>;
 
-// Validar e exportar variáveis de ambiente
 let validatedEnv: Env;
 
 try {

@@ -6,6 +6,7 @@ import { corsOptions } from './config/cors';
 import env from './config/env.config';
 import { errorMiddleware } from './middleware/error.middleware';
 import { logger } from './middleware/logger.middleware';
+import path from 'path';
 
 // Importar rotas
 import authRoutes from './routes/auth.routes';
@@ -27,41 +28,27 @@ app.use(helmet());
 app.use(cors(corsOptions));
 
 // Body Parser
-app.use(express.json({ limit: env.MAX_FILE_SIZE.toString() }));
-app.use(express.urlencoded({ extended: true, limit: env.MAX_FILE_SIZE.toString() }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Servir ficheiros estáticos (uploads)
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Logger
 app.use(logger);
 
-app.use('/api/delivery', deliveryRoutes);
-
-// Rate Limiting (aplicado globalmente - apenas em produção)
-if (env.NODE_ENV === 'production') {
-    const globalLimiter = rateLimit({
-        windowMs: env.RATE_LIMIT_WINDOW_MS,
-        max: env.RATE_LIMIT_MAX_REQUESTS,
-        message: 'Muitas requisições, tente novamente mais tarde',
-        standardHeaders: true,
-        legacyHeaders: false,
-    });
-    app.use(globalLimiter);
-}
-
-// Rate Limiting mais rigoroso para rotas de autenticação
-// Em desenvolvimento, usar limites altos; em produção, manter rigoroso
-const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: env.NODE_ENV === 'production' ? 5 : 100, // 5 em prod, 100 em dev
-    message: 'Muitas tentativas de login, tente novamente em 15 minutos',
-    skip: () => env.NODE_ENV === 'development', // Desabilitar em desenvolvimento
+// Rate Limiting global
+const globalLimiter = rateLimit({
+    windowMs: env.RATE_LIMIT_WINDOW_MS,
+    max: env.RATE_LIMIT_MAX_REQUESTS,
+    message: 'Muitas requisições, tente novamente mais tarde',
+    standardHeaders: true,
+    legacyHeaders: false,
 });
+app.use(globalLimiter);
 
-// ============ ROTAS DE SAÚDE ============
+// ============ ROTA DE SAÚDE ============
 
-/**
- * GET /health
- * Verifica se a API está funcionando
- */
 app.get('/health', (_req: Request, res: Response) => {
     res.json({
         success: true,
@@ -73,46 +60,25 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // ============ ROTAS DA API ============
 
-// Rotas de autenticação (com rate limiting)
-if (env.NODE_ENV === 'production') {
-    app.use('/api/auth/login', authLimiter);
-    app.use('/api/auth/register', authLimiter);
-}
 app.use('/api/auth', authRoutes);
-
-// Rotas de menu
 app.use('/api/menu', menuRoutes);
-
-// Rotas de pedidos
 app.use('/api/orders', orderRoutes);
-
-// Rotas de reservas
 app.use('/api/reservations', reservationRoutes);
-
-// Rotas de mesas
 app.use('/api/tables', tableRoutes);
-
-// Rotas de avaliações
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/delivery', deliveryRoutes);
 
 // ============ ROTA 404 ============
 
-/**
- * Qualquer rota não definida retorna 404
- */
 app.use('*', (req: Request, res: Response) => {
     res.status(404).json({
         success: false,
         message: `Rota ${req.originalUrl} não encontrada`,
-        timestamp: new Date().toISOString(),
     });
 });
 
 // ============ MIDDLEWARE DE ERRO ============
 
-/**
- * Middleware de erro deve ser o último
- */
 app.use(errorMiddleware);
 
 export default app;
