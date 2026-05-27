@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Search, AlertCircle, CheckCircle, XCircle, Loader, FolderPlus } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Edit2, Trash2, Search, AlertCircle, CheckCircle, XCircle, Loader, FolderPlus, Upload, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,12 +45,19 @@ export function AdminMenu() {
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [editingCategory, setEditingCategory] = useState<Categoria | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     categoria_id: '', nome: '', descricao: '', preco_kz: '', preco_promocional_kz: '',
     tempo_preparo: '', calorias: '', vegetariano: false, vegano: false, sem_gluten: false,
-    picante: false, destaque: false, prato_do_dia: false, imagem: '',
+    picante: false, destaque: false, prato_do_dia: false,
   });
+
+  // Estado para o ficheiro de imagem
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [existingImage, setExistingImage] = useState<string | null>(null);
 
   const [categoryFormData, setCategoryFormData] = useState({ nome: '', descricao: '' });
 
@@ -72,6 +79,44 @@ export function AdminMenu() {
     }
   };
 
+  // ===== UPLOAD DE IMAGEM =====
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de ficheiro
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Formato inválido. Use JPG, PNG, WebP ou GIF');
+      return;
+    }
+
+    // Validar tamanho (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Imagem muito grande. Máximo 5MB');
+      return;
+    }
+
+    setImageFile(file);
+    setExistingImage(null);
+
+    // Criar preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setExistingImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   // ===== ITENS DO CARDÁPIO =====
   const handleOpenDialog = (item?: MenuItem) => {
     if (item) {
@@ -81,15 +126,21 @@ export function AdminMenu() {
         preco_kz: item.preco_kz.toString(), preco_promocional_kz: item.preco_promocional_kz?.toString() || '',
         tempo_preparo: item.tempo_preparo?.toString() || '', calorias: item.calorias?.toString() || '',
         vegetariano: item.vegetariano, vegano: item.vegano, sem_gluten: item.sem_gluten,
-        picante: item.picante, destaque: item.destaque, prato_do_dia: item.prato_do_dia, imagem: item.imagem || '',
+        picante: item.picante, destaque: item.destaque, prato_do_dia: item.prato_do_dia,
       });
+      setExistingImage(item.imagem);
+      setImageFile(null);
+      setImagePreview(null);
     } else {
       setEditingItem(null);
       setFormData({
         categoria_id: '', nome: '', descricao: '', preco_kz: '', preco_promocional_kz: '',
         tempo_preparo: '', calorias: '', vegetariano: false, vegano: false, sem_gluten: false,
-        picante: false, destaque: false, prato_do_dia: false, imagem: '',
+        picante: false, destaque: false, prato_do_dia: false,
       });
+      setExistingImage(null);
+      setImageFile(null);
+      setImagePreview(null);
     }
     setIsDialogOpen(true);
   };
@@ -103,29 +154,72 @@ export function AdminMenu() {
       const preco = parseFloat(formData.preco_kz);
       if (isNaN(preco) || preco <= 0) { toast.error('Preço deve ser um número válido e positivo'); return; }
 
-      const data = {
-        categoria_id: formData.categoria_id, nome: formData.nome,
-        descricao: formData.descricao?.trim() || undefined, preco_kz: preco,
-        preco_promocional_kz: formData.preco_promocional_kz ? parseFloat(formData.preco_promocional_kz) : undefined,
-        tempo_preparo: formData.tempo_preparo ? parseInt(formData.tempo_preparo) : undefined,
-        calorias: formData.calorias ? parseInt(formData.calorias) : undefined,
-        vegetariano: formData.vegetariano, vegano: formData.vegano, sem_gluten: formData.sem_gluten,
-        picante: formData.picante, destaque: formData.destaque, prato_do_dia: formData.prato_do_dia,
-        imagem: formData.imagem?.trim() || undefined,
-      };
+      setIsSaving(true);
 
-      if (editingItem) {
-        await api.put(`/menu/items/${editingItem.id}`, data);
-        toast.success('Item atualizado com sucesso');
+      // Se tem ficheiro de imagem, usar FormData
+      if (imageFile) {
+        const formDataToSend = new FormData();
+        formDataToSend.append('imagem', imageFile);
+        formDataToSend.append('categoria_id', formData.categoria_id);
+        formDataToSend.append('nome', formData.nome);
+        formDataToSend.append('preco_kz', preco.toString());
+        if (formData.descricao?.trim()) formDataToSend.append('descricao', formData.descricao.trim());
+        if (formData.preco_promocional_kz) formDataToSend.append('preco_promocional_kz', formData.preco_promocional_kz);
+        if (formData.tempo_preparo) formDataToSend.append('tempo_preparo', formData.tempo_preparo);
+        if (formData.calorias) formDataToSend.append('calorias', formData.calorias);
+        formDataToSend.append('vegetariano', String(formData.vegetariano));
+        formDataToSend.append('vegano', String(formData.vegano));
+        formDataToSend.append('sem_gluten', String(formData.sem_gluten));
+        formDataToSend.append('picante', String(formData.picante));
+        formDataToSend.append('destaque', String(formData.destaque));
+        formDataToSend.append('prato_do_dia', String(formData.prato_do_dia));
+
+        if (editingItem) {
+          await api.put(`/menu/items/${editingItem.id}`, formDataToSend);
+          toast.success('Item atualizado com sucesso');
+        } else {
+          await api.post('/menu/items', formDataToSend);
+          toast.success('Item criado com sucesso');
+        }
       } else {
-        await api.post('/menu/items', data);
-        toast.success('Item criado com sucesso');
+        // Sem ficheiro, enviar JSON normal
+        const data: any = {
+          categoria_id: formData.categoria_id,
+          nome: formData.nome,
+          descricao: formData.descricao?.trim() || undefined,
+          preco_kz: preco,
+          preco_promocional_kz: formData.preco_promocional_kz ? parseFloat(formData.preco_promocional_kz) : undefined,
+          tempo_preparo: formData.tempo_preparo ? parseInt(formData.tempo_preparo) : undefined,
+          calorias: formData.calorias ? parseInt(formData.calorias) : undefined,
+          vegetariano: formData.vegetariano,
+          vegano: formData.vegano,
+          sem_gluten: formData.sem_gluten,
+          picante: formData.picante,
+          destaque: formData.destaque,
+          prato_do_dia: formData.prato_do_dia,
+        };
+
+        // Se removeu a imagem
+        if (existingImage === null && editingItem) {
+          data.imagem = null;
+        }
+
+        if (editingItem) {
+          await api.put(`/menu/items/${editingItem.id}`, data);
+          toast.success('Item atualizado com sucesso');
+        } else {
+          await api.post('/menu/items', data);
+          toast.success('Item criado com sucesso');
+        }
       }
+
       setIsDialogOpen(false);
       loadData();
     } catch (error: unknown) {
       const errorMessage = axios.isAxiosError(error) ? error.response?.data?.message || 'Falha ao salvar item' : 'Falha ao salvar item';
       toast.error(errorMessage);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -200,6 +294,12 @@ export function AdminMenu() {
     return matchCategory && matchSearch;
   });
 
+  const getImageUrl = (imagem: string | null): string | null => {
+    if (!imagem) return null;
+    if (imagem.startsWith('http') || imagem.startsWith('/')) return imagem;
+    return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/uploads/${imagem}`;
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -273,6 +373,19 @@ export function AdminMenu() {
             <Card key={item.id} className="hover:shadow-lg transition-shadow">
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-4">
+                  {/* Imagem do item */}
+                  {item.imagem && (
+                    <div className="flex-shrink-0">
+                      <img
+                        src={getImageUrl(item.imagem)!}
+                        alt={item.nome}
+                        className="w-24 h-24 object-cover rounded-lg"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-semibold text-lg">{item.nome}</h3>
@@ -321,8 +434,11 @@ export function AdminMenu() {
 
       {/* Dialog de Item */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editingItem ? 'Editar Item' : 'Novo Item do Cardápio'}</DialogTitle><DialogDescription>Preencha os detalhes do item</DialogDescription></DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? 'Editar Item' : 'Novo Item do Cardápio'}</DialogTitle>
+            <DialogDescription>Preencha os detalhes do item</DialogDescription>
+          </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="col-span-2">
               <Label>Categoria *</Label>
@@ -333,19 +449,76 @@ export function AdminMenu() {
             </div>
             <div className="col-span-2"><Label>Nome *</Label><Input value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} /></div>
             <div className="col-span-2"><Label>Descrição</Label><textarea className="w-full px-3 py-2 border rounded-md bg-background" rows={2} value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} /></div>
-            <div className="col-span-2"><Label>URL da Imagem</Label><Input type="url" value={formData.imagem} onChange={(e) => setFormData({ ...formData, imagem: e.target.value })} /></div>
+
+            {/* UPLOAD DE IMAGEM */}
+            <div className="col-span-2">
+              <Label>Imagem do Prato</Label>
+              <div className="mt-2 space-y-3">
+                {/* Preview da imagem */}
+                {(imagePreview || existingImage) && (
+                  <div className="relative inline-block">
+                    <img
+                      src={imagePreview || getImageUrl(existingImage)!}
+                      alt="Preview"
+                      className="w-32 h-32 object-cover rounded-lg border"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                    <button
+                      onClick={handleRemoveImage}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Botão de upload */}
+                <div className="flex items-center gap-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/jpg,image/webp,image/gif"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                    id="imagem-upload"
+                  />
+                  <label htmlFor="imagem-upload">
+                    <Button type="button" variant="outline" className="gap-2 cursor-pointer" asChild>
+                      <span>
+                        <Upload className="w-4 h-4" />
+                        {imageFile || existingImage ? 'Alterar Imagem' : 'Selecionar Imagem'}
+                      </span>
+                    </Button>
+                  </label>
+                  <span className="text-xs text-muted-foreground">
+                    JPG, PNG, WebP ou GIF (máx. 5MB)
+                  </span>
+                </div>
+
+                {/* Placeholder se não tem imagem */}
+                {!imagePreview && !existingImage && (
+                  <div className="flex items-center justify-center w-32 h-32 bg-gray-100 rounded-lg border border-dashed">
+                    <ImageIcon className="w-8 h-8 text-gray-400" />
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div><Label>Preço (Kz) *</Label><Input type="number" step="0.01" value={formData.preco_kz} onChange={(e) => setFormData({ ...formData, preco_kz: e.target.value })} /></div>
             <div><Label>Preço Promocional</Label><Input type="number" step="0.01" value={formData.preco_promocional_kz} onChange={(e) => setFormData({ ...formData, preco_promocional_kz: e.target.value })} /></div>
             <div><Label>Tempo Preparo (min)</Label><Input type="number" value={formData.tempo_preparo} onChange={(e) => setFormData({ ...formData, tempo_preparo: e.target.value })} /></div>
             <div><Label>Calorias</Label><Input type="number" value={formData.calorias} onChange={(e) => setFormData({ ...formData, calorias: e.target.value })} /></div>
-            {['vegetariano', 'vegano', 'sem_gluten', 'picante', 'destaque', 'prato_do_dia'].map((key) => (
-              <div key={key} className="flex items-center gap-2">
-                <input type="checkbox" id={key} checked={(formData as any)[key]} onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })} />
-                <label htmlFor={key}>{key === 'vegetariano' ? '🥗 Vegetariano' : key === 'vegano' ? '🌿 Vegano' : key === 'sem_gluten' ? '🌾 Sem Glúten' : key === 'picante' ? '🌶️ Picante' : key === 'destaque' ? '⭐ Destaque' : '🎯 Prato do Dia'}</label>
-              </div>
-            ))}
+            {/* Flags removidas do modal de criação/edição conforme solicitado */}
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button><Button onClick={handleSaveItem}>{editingItem ? 'Atualizar' : 'Criar'}</Button></DialogFooter>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveItem} disabled={isSaving}>
+              {isSaving ? <Loader className="w-4 h-4 animate-spin mr-2" /> : null}
+              {editingItem ? 'Atualizar' : 'Criar'} Item
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

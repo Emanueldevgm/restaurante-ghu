@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint-disable comma-dangle */
 /* eslint-disable quotes */
 /* eslint-disable @typescript-eslint/no-var-requires */

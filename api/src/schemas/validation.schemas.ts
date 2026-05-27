@@ -117,13 +117,8 @@ export const ResetPasswordDTOSchema = z.object({
 const CreateItemCardapioBaseSchema = z.object({
   categoria_id: z.string().uuid('ID da categoria inválido'),
   nome: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres').max(100),
-  nome_en: z.string().max(100).optional(),
-  descricao: z
-    .string()
-    .max(500)
-    .transform((v) => v?.trim() || undefined)
-    .pipe(z.union([z.literal(undefined), z.string()]))
-    .optional(),
+  nome_en: z.string().max(100).optional().nullable(),
+  descricao: z.string().max(500).optional().nullable(),
   preco_kz: z
     .union([z.number(), z.string()])
     .transform((v) => {
@@ -135,57 +130,96 @@ const CreateItemCardapioBaseSchema = z.object({
     })
     .pipe(z.number().positive('Preço deve ser positivo').finite()),
   preco_promocional_kz: z
-    .union([z.number(), z.string()])
+    .union([z.number(), z.string(), z.null(), z.undefined()])
     .transform((v) => {
+      if (v === null || v === undefined || v === '') return undefined;
       if (typeof v === 'string') {
-        if (!v || !v.trim()) return undefined;
         const num = parseFloat(v);
         return isNaN(num) ? undefined : num;
       }
       return v;
     })
-    .pipe(z.union([z.number().positive('Preço promocional deve ser positivo').finite(), z.undefined(), z.null()]))
+    .pipe(z.number().positive().optional().nullable())
     .optional()
     .nullable(),
   tempo_preparo: z
-    .union([z.number(), z.string()])
+    .union([z.number(), z.string(), z.null(), z.undefined()])
     .transform((v) => {
+      if (v === null || v === undefined || v === '') return undefined;
       if (typeof v === 'string') {
-        if (!v || !v.trim()) return undefined;
         const num = parseInt(v, 10);
         return isNaN(num) ? undefined : num;
       }
       return v;
     })
-    .pipe(z.union([z.number().int().positive('Tempo deve ser em minutos positivos'), z.undefined(), z.null()]))
+    .pipe(z.number().int().positive().optional().nullable())
     .optional()
     .nullable(),
   calorias: z
-    .union([z.number(), z.string()])
+    .union([z.number(), z.string(), z.null(), z.undefined()])
     .transform((v) => {
+      if (v === null || v === undefined || v === '') return undefined;
       if (typeof v === 'string') {
-        if (!v || !v.trim()) return undefined;
         const num = parseInt(v, 10);
         return isNaN(num) ? undefined : num;
       }
       return v;
     })
-    .pipe(z.union([z.number().int().nonnegative('Calorias deve ser não-negativo'), z.undefined(), z.null()]))
+    .pipe(z.number().int().nonnegative().optional().nullable())
     .optional()
     .nullable(),
-  vegetariano: z.boolean().default(false).optional(),
-  vegano: z.boolean().default(false).optional(),
-  sem_gluten: z.boolean().default(false).optional(),
-  picante: z.boolean().default(false).optional(),
-  destaque: z.boolean().default(false).optional(),
-  prato_do_dia: z.boolean().default(false).optional(),
-  imagem: z
-    .string()
-    .min(0)
-    .transform((v) => v?.trim() || undefined)
-    .pipe(z.union([z.literal(undefined), z.string().url('URL da imagem inválida')]))
+  // CORREÇÃO: Aceitar boolean ou string "true"/"false" com default false
+  vegetariano: z
+    .union([z.boolean(), z.string()])
+    .transform((v) => v === true || v === 'true')
+    .default(false)
     .optional(),
-  ordem_exibicao: z.number().int().nonnegative().default(0).optional().nullable(),
+  vegano: z
+    .union([z.boolean(), z.string()])
+    .transform((v) => v === true || v === 'true')
+    .default(false)
+    .optional(),
+  sem_gluten: z
+    .union([z.boolean(), z.string()])
+    .transform((v) => v === true || v === 'true')
+    .default(false)
+    .optional(),
+  picante: z
+    .union([z.boolean(), z.string()])
+    .transform((v) => v === true || v === 'true')
+    .default(false)
+    .optional(),
+  destaque: z
+    .union([z.boolean(), z.string()])
+    .transform((v) => v === true || v === 'true')
+    .default(false)
+    .optional(),
+  prato_do_dia: z
+    .union([z.boolean(), z.string()])
+    .transform((v) => v === true || v === 'true')
+    .default(false)
+    .optional(),
+  // CORREÇÃO: Imagem aceita null, string ou undefined
+  imagem: z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => {
+      if (v === null || v === undefined || v === '') return undefined;
+      return v;
+    })
+    .optional()
+    .nullable(),
+  ordem_exibicao: z
+    .union([z.number(), z.string()])
+    .transform((v) => {
+      if (typeof v === 'string') {
+        const num = parseInt(v, 10);
+        return isNaN(num) ? 0 : num;
+      }
+      return v;
+    })
+    .pipe(z.number().int().nonnegative())
+    .default(0)
+    .optional(),
 });
 
 export const CreateItemCardapioDTOSchema = CreateItemCardapioBaseSchema.refine(
