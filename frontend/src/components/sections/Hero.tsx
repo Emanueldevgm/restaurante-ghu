@@ -73,7 +73,7 @@ export function Hero() {
           Grande Hotel do Uíge
         </h1>
 
-        <p className="mx-auto mb-8 max-w-xl text-lg text-blue-50/82 animate-fade-up md:text-xl">
+        <p className="mx-auto mb-8 max-w-xl text-lg text-white animate-fade-up md:text-xl">
           Conforto, gastronomia de excelência e hospitalidade angolana num só lugar.
         </p>
 

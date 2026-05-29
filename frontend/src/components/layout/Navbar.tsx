@@ -57,10 +57,7 @@ export function Navbar() {
       <div className="container px-4">
         <div className="flex h-[4.5rem] items-center justify-between gap-3 py-3 md:h-20">
           <Link to="/" className="flex items-center gap-3 transition-transform hover:scale-[1.01]">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent shadow-accent">
-              <span className="font-display text-sm font-bold text-white">GHU</span>
-            </div>
-            <Logo size="md" variant="full" />
+            <Logo size="lg" className="h-10 w-auto" />
           </Link>
 
           <div className="hidden items-center gap-2 rounded-full border border-border/80 bg-white/90 p-1 shadow-sm lg:flex">

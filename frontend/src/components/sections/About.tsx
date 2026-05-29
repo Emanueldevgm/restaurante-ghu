@@ -58,7 +58,7 @@ export function About() {
           {/* Image */}
           <div className="relative">
             <img
-              src="https://images.unsplash.com/photo-1504674900968-39ed53c174f5?w=600&h=400&fit=crop"
+              src="/img/parte-traseira.jpg"
               alt="Grande Hotel do Uige"
               className="rounded-lg shadow-elegant w-full h-full object-cover"
             />

@@ -1,32 +1,24 @@
-import React from 'react';
-
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   variant?: 'full' | 'icon' | 'text';
   className?: string;
 }
 
-const logoSizeMap = {
-  sm: { fontSize: 14 },
-  md: { fontSize: 18 },
-  lg: { fontSize: 24 },
-  xl: { fontSize: 30 },
-};
+const logoSizeClassMap = {
+  sm: 'h-115 w-15',
+  md: 'h-15 w-15',
+  lg: 'h-15 w-15',
+  xl: 'h-15 w-15',
+} as const;
 
 export function Logo({ size = 'md', variant = 'full', className = '' }: LogoProps) {
-  const sizeConfig = logoSizeMap[size];
-  const variantClassMap = {
-    icon: 'font-semibold tracking-tight',
-    text: 'font-bold tracking-tight',
-    full: 'font-bold tracking-tight',
-  } as const;
+  const logoAlt = variant === 'icon' ? 'GHU' : 'Restaurante GHU';
 
   return (
-    <div
-      className={`font-display text-primary ${variantClassMap[variant]} ${className}`}
-      style={{ fontSize: sizeConfig.fontSize, lineHeight: 1.1 }}
-    >
-      {variant === 'icon' ? 'GHU' : 'Restaurante GHU'}
-    </div>
+    <img
+      src="/img/logo.png"
+      alt={logoAlt}
+      className={`object-contain ${logoSizeClassMap[size]} ${className}`.trim()}
+    />
   );
 }
