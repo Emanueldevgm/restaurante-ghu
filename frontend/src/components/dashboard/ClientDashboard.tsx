@@ -46,9 +46,7 @@ export function ClientDashboard() {
   const { data: orders = [], isLoading: ordersLoading } = useMyOrders();
   const [activeTab, setActiveTab] = useState('overview');
 
-  if (!user || user.role !== 'client') {
-    return <Navigate to="/auth" replace />;
-  }
+ 
 
   const handleLogout = () => {
     logout();

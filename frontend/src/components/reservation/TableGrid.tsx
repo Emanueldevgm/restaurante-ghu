@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
-import { Users, Info } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -10,21 +9,38 @@ import { Table } from '@/services/api';
 import { ReservationDialog } from './ReservationDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export function TableGrid() {
+interface TableWithStatus extends Table {
+  status: 'disponivel' | 'ocupada' | 'reservada' | string;
+}
+
+export function TableGrid(): React.ReactElement {
   const { data: tables = [], isLoading: tablesLoading } = useTables();
   const { data: tableStatus = [], isLoading: statusLoading } = useTableStatus();
-  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+  const [selectedTable, setSelectedTable] = useState<TableWithStatus | null>(null);
   const [showReservationDialog, setShowReservationDialog] = useState(false);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  const tablesWithStatus = tables.map(table => {
-    const statusInfo = tableStatus.find((st: any) => st.id === table.id);
-    return { ...table, status: statusInfo?.status_mesa || 'disponivel' };
+  const normalizeTableStatus = (status: string): 'disponivel' | 'ocupada' | 'reservada' => {
+    switch (status) {
+      case 'occupied':
+      case 'ocupada':
+        return 'ocupada';
+      case 'reserved':
+      case 'reservada':
+        return 'reservada';
+      case 'disponivel':
+      default:
+        return 'disponivel';
+    }
+  };
+
+  const tablesWithStatus: TableWithStatus[] = tables.map((table: Table) => {
+    const statusInfo = tableStatus.find((st: { id: string; status_mesa?: string }) => st.id === table.id);
+    return { ...table, status: normalizeTableStatus(statusInfo?.status_mesa || 'disponivel') };
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleTableClick = (table: any) => {
+  const handleTableClick = (table: TableWithStatus): void => {
     if (table.status !== 'disponivel') {
       toast.error('Mesa indisponível');
       return;
@@ -38,7 +54,7 @@ export function TableGrid() {
     setShowReservationDialog(true);
   };
 
-  const getTableStyle = (status: string) => {
+  const getTableStyle = (status: string): string => {
     switch (status) {
       case 'disponivel':
         return 'bg-blue-500 hover:bg-blue-500/80 hover:scale-105 cursor-pointer shadow-blue-500/30';
@@ -81,7 +97,6 @@ export function TableGrid() {
           </p>
         </div>
 
-        {/* Legenda com novas cores */}
         <div className="flex justify-center gap-8 mb-10">
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 rounded bg-blue-500 shadow-lg shadow-blue-500/30" />

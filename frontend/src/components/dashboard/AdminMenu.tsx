@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import api from '@/services/api';
+import api, { buildImageUrl } from '@/services/api';
 import axios from 'axios';
 
 interface MenuItem {
@@ -137,72 +137,72 @@ export function AdminMenu() {
         toast.error('Preencha todos os campos obrigatórios');
         return;
       }
-      const preco = parseFloat(formData.preco_kz);
-      if (isNaN(preco) || preco <= 0) { toast.error('Preço deve ser um número válido e positivo'); return; }
+
+      const preco = Number.parseFloat(formData.preco_kz);
+      if (Number.isNaN(preco) || preco <= 0) {
+        toast.error('Preço deve ser um número válido e positivo');
+        return;
+      }
 
       setIsSaving(true);
 
+      // 🔑 CORREÇÃO: SEMPRE usar FormData para que o Multer funcione corretamente
+      const formDataToSend = new FormData();
+
+      // Adiciona a imagem APENAS se o usuário selecionou um ficheiro
       if (imageFile) {
-        // Upload com imagem nova
-        const formDataToSend = new FormData();
         formDataToSend.append('imagem', imageFile);
-        formDataToSend.append('categoria_id', formData.categoria_id);
-        formDataToSend.append('nome', formData.nome);
-        formDataToSend.append('preco_kz', preco.toString());
-        if (formData.descricao?.trim()) formDataToSend.append('descricao', formData.descricao.trim());
-        if (formData.preco_promocional_kz) formDataToSend.append('preco_promocional_kz', formData.preco_promocional_kz);
-        if (formData.tempo_preparo) formDataToSend.append('tempo_preparo', formData.tempo_preparo);
-        if (formData.calorias) formDataToSend.append('calorias', formData.calorias);
-        formDataToSend.append('vegetariano', String(formData.vegetariano));
-        formDataToSend.append('vegano', String(formData.vegano));
-        formDataToSend.append('sem_gluten', String(formData.sem_gluten));
-        formDataToSend.append('picante', String(formData.picante));
-        formDataToSend.append('destaque', String(formData.destaque));
-        formDataToSend.append('prato_do_dia', String(formData.prato_do_dia));
+      }
 
-        if (editingItem) {
-          await api.put(`/menu/items/${editingItem.id}`, formDataToSend);
-          toast.success('Item atualizado com sucesso');
-        } else {
-          await api.post('/menu/items', formDataToSend);
-          toast.success('Item criado com sucesso');
-        }
+      // Adiciona todos os campos do formulário
+      formDataToSend.append('categoria_id', formData.categoria_id);
+      formDataToSend.append('nome', formData.nome);
+      formDataToSend.append('preco_kz', preco.toString());
+
+      if (formData.descricao?.trim()) {
+        formDataToSend.append('descricao', formData.descricao.trim());
+      }
+      if (formData.preco_promocional_kz && formData.preco_promocional_kz !== '') {
+        formDataToSend.append('preco_promocional_kz', formData.preco_promocional_kz);
+      }
+      if (formData.tempo_preparo && formData.tempo_preparo !== '') {
+        formDataToSend.append('tempo_preparo', formData.tempo_preparo);
+      }
+      if (formData.calorias && formData.calorias !== '') {
+        formDataToSend.append('calorias', formData.calorias);
+      }
+
+      // Booleanos como string para o Multer processar corretamente
+      formDataToSend.append('vegetariano', String(formData.vegetariano));
+      formDataToSend.append('vegano', String(formData.vegano));
+      formDataToSend.append('sem_gluten', String(formData.sem_gluten));
+      formDataToSend.append('picante', String(formData.picante));
+      formDataToSend.append('destaque', String(formData.destaque));
+      formDataToSend.append('prato_do_dia', String(formData.prato_do_dia));
+
+      // Se estiver a editar e removeu a imagem (existingImage === null e sem imageFile)
+      if (editingItem && existingImage === null && !imageFile) {
+        formDataToSend.append('imagem', 'null');
+      }
+
+      if (editingItem) {
+        await api.put(`/menu/items/${editingItem.id}`, formDataToSend, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        toast.success('Item atualizado com sucesso');
       } else {
-        // Sem imagem nova
-        const data: any = {
-          categoria_id: formData.categoria_id,
-          nome: formData.nome,
-          descricao: formData.descricao?.trim() || undefined,
-          preco_kz: preco,
-          preco_promocional_kz: formData.preco_promocional_kz ? parseFloat(formData.preco_promocional_kz) : undefined,
-          tempo_preparo: formData.tempo_preparo ? parseInt(formData.tempo_preparo) : undefined,
-          calorias: formData.calorias ? parseInt(formData.calorias) : undefined,
-          vegetariano: formData.vegetariano,
-          vegano: formData.vegano,
-          sem_gluten: formData.sem_gluten,
-          picante: formData.picante,
-          destaque: formData.destaque,
-          prato_do_dia: formData.prato_do_dia,
-        };
-
-        // IMPORTANTE: Se o usuário removeu a imagem (existingImage === null e editingItem existe)
-        if (editingItem && existingImage === null) {
-          data.imagem = null;
-        }
-
-        if (editingItem) {
-          await api.put(`/menu/items/${editingItem.id}`, data);
-          toast.success('Item atualizado com sucesso');
-        } else {
-          await api.post('/menu/items', data);
-          toast.success('Item criado com sucesso');
-        }
+        await api.post('/menu/items', formDataToSend, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        toast.success('Item criado com sucesso');
       }
 
       setIsDialogOpen(false);
       loadData();
     } catch (error: unknown) {
-      const errorMessage = axios.isAxiosError(error) ? error.response?.data?.message || 'Falha ao salvar item' : 'Falha ao salvar item';
+      const errorMessage = axios.isAxiosError(error)
+        ? error.response?.data?.message || 'Falha ao salvar item'
+        : 'Falha ao salvar item';
       toast.error(errorMessage);
     } finally {
       setIsSaving(false);
@@ -279,24 +279,6 @@ export function AdminMenu() {
     return matchCategory && matchSearch;
   });
 
-  const buildApiBaseUrl = (): string => {
-    const rawBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-    let base = rawBase;
-
-    if (base.startsWith('/')) {
-      base = `${window.location.origin}${base}`;
-    }
-
-    base = base.replace(/\/api\/?$/, '');
-    return base.replace(/\/$/, '');
-  };
-
-  const getImageUrl = (imagem: string | null): string | null => {
-    if (!imagem) return null;
-    if (imagem.startsWith('http')) return imagem;
-    const cleanPath = imagem.startsWith('/') ? imagem : `/${imagem}`;
-    return `${buildApiBaseUrl()}${cleanPath}`;
-  };
 
   if (isLoading) {
     return (
@@ -374,7 +356,7 @@ export function AdminMenu() {
                   {item.imagem && (
                     <div className="flex-shrink-0">
                       <img
-                        src={getImageUrl(item.imagem)!}
+                        src={buildImageUrl(item.imagem)}
                         alt={item.nome}
                         className="w-24 h-24 object-cover rounded-lg"
                         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
@@ -452,7 +434,7 @@ export function AdminMenu() {
                 {(imagePreview || existingImage) && (
                   <div className="relative inline-block">
                     <img
-                      src={imagePreview || getImageUrl(existingImage)!}
+                      src={imagePreview || buildImageUrl(existingImage)}
                       alt="Preview"
                       className="w-32 h-32 object-cover rounded-lg border"
                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}

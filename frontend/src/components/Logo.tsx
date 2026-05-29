@@ -5,10 +5,10 @@ interface LogoProps {
 }
 
 const logoSizeClassMap = {
-  sm: 'h-115 w-15',
-  md: 'h-15 w-15',
-  lg: 'h-15 w-15',
-  xl: 'h-15 w-15',
+  sm: 'h-8 w-8',
+  md: 'h-10 w-10',
+  lg: 'h-12 w-12',
+  xl: 'h-14 w-14',
 } as const;
 
 export function Logo({ size = 'md', variant = 'full', className = '' }: LogoProps) {

@@ -3,7 +3,7 @@ import { Star, Sparkles, Percent, ShoppingCart } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MenuItem } from '@/services/api';
+import { MenuItem, buildImageUrl } from '@/services/api';
 import { useCart } from '@/contexts/CartContext';
 
 interface ProductCardProps {
@@ -22,7 +22,6 @@ export function ProductCard({ item }: ProductCardProps) {
   const { addItem } = useCart();
 
   const handleAdd = () => {
-    // Criar objeto MenuItem com todas as propriedades obrigatórias
     const adaptedItem: MenuItem = {
       id: item.id,
       categoria_id: item.categoryId,
@@ -32,7 +31,7 @@ export function ProductCard({ item }: ProductCardProps) {
       preco_kz: item.price,
       preco_promocional_kz: item.originalPrice ?? null,
       tempo_preparo: null,
-      calorias: null,           // 🔧 ADICIONADO
+      calorias: null,
       vegetariano: false,
       vegano: false,
       sem_gluten: false,
@@ -50,8 +49,7 @@ export function ProductCard({ item }: ProductCardProps) {
     ? Math.round((1 - item.price / item.originalPrice) * 100)
     : null;
 
-  // URL da imagem com fallback
-  const imageUrl = item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500';
+  const imageUrl = buildImageUrl(item.image ?? null);
 
   return (
     <Card className="group relative overflow-hidden border border-white/80 bg-white/95 shadow-elegant transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
@@ -61,8 +59,7 @@ export function ProductCard({ item }: ProductCardProps) {
           alt={item.name}
           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
           onError={(e) => {
-            // Fallback em caso de erro na imagem
-            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500';
+            (e.target as HTMLImageElement).src = buildImageUrl(null);
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />

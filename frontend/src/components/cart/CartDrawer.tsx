@@ -4,9 +4,9 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { AddressSelector } from '@/components/checkout/AddressSelector';
-import { useCreateOrder } from '@/hooks/useApi';
+import { useCreateOrder, useTableStatus, useTables } from '@/hooks/useApi';
 import { useCalculateDeliveryFee } from '@/hooks/useDeliveryFee';
-import api from '@/services/api';
+import api, { buildImageUrl, Table } from '@/services/api';
 import {
   Drawer,
   DrawerContent,
@@ -21,18 +21,49 @@ import { ShoppingCart, Plus, Minus, Trash2, Truck, Store, Home } from 'lucide-re
 import { QuantityStepper } from '@/components/ui/QuantityStepper';
 import { toast } from 'sonner';
 
+interface TableWithStatus extends Table {
+  status: 'disponivel' | 'ocupada' | 'reservada';
+}
+
 export function CartDrawer() {
   const { items, isCartOpen, setIsCartOpen, totalPrice, removeItem, updateQuantity, clearCart } =
     useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { mutate: createOrder, isPending: isCreatingOrder } = useCreateOrder();
+  const { data: tables = [] } = useTables();
+  const { data: tableStatus = [] } = useTableStatus();
   const [orderType, setOrderType] = useState<'delivery' | 'retirada' | 'mesa'>('retirada');
   const [selectedAddressId, setSelectedAddressId] = useState('');
+  const [selectedTableId, setSelectedTableId] = useState('');
   const [addresses, setAddresses] = useState<any[]>([]);
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
   const [estimatedTime, setEstimatedTime] = useState<number | null>(null);
   const { mutate: calculateFee } = useCalculateDeliveryFee();
+
+  const normalizeTableStatus = (status: string): 'disponivel' | 'ocupada' | 'reservada' => {
+    switch (status) {
+      case 'occupied':
+      case 'ocupada':
+        return 'ocupada';
+      case 'reserved':
+      case 'reservada':
+        return 'reservada';
+      case 'disponivel':
+      default:
+        return 'disponivel';
+    }
+  };
+
+  const tablesWithStatus = tables.map((table) => {
+    const statusInfo = tableStatus.find((entry) => entry.id === table.id);
+    return {
+      ...table,
+      status: normalizeTableStatus(statusInfo?.status_mesa || 'disponivel'),
+    } satisfies TableWithStatus;
+  });
+
+  const availableTables = tablesWithStatus.filter((table) => table.ativa && table.status === 'disponivel');
 
   useEffect(() => {
     if (isAuthenticated && orderType === 'delivery') {
@@ -67,6 +98,12 @@ export function CartDrawer() {
     }
   }, [orderType, selectedAddressId, addresses, calculateFee]);
 
+  useEffect(() => {
+    if (orderType !== 'mesa') {
+      setSelectedTableId('');
+    }
+  }, [orderType]);
+
   const totalWithFee = totalPrice + (deliveryFee || 0);
 
   const handleCheckout = () => {
@@ -82,6 +119,11 @@ export function CartDrawer() {
       return;
     }
 
+    if (orderType === 'mesa' && !selectedTableId) {
+      toast.error('Selecione uma mesa');
+      return;
+    }
+
     createOrder(
       {
         tipo: orderType,
@@ -92,6 +134,7 @@ export function CartDrawer() {
         })),
         observacoes: '',
         ...(orderType === 'delivery' && { endereco_id: selectedAddressId }),
+        ...(orderType === 'mesa' && { mesa_id: selectedTableId }),
       },
       {
         onSuccess: (response: any) => {
@@ -99,6 +142,7 @@ export function CartDrawer() {
           clearCart();
           setIsCartOpen(false);
           setSelectedAddressId('');
+          setSelectedTableId('');
         },
         onError: (error: any) =>
           toast.error(error.response?.data?.message || 'Erro ao criar pedido'),
@@ -130,9 +174,12 @@ export function CartDrawer() {
               >
                 <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-muted">
                   <img
-                    src={item.imagem || '/placeholder.svg'}
+                    src={buildImageUrl(item.imagem)}
                     className="h-full w-full object-cover"
                     alt={item.nome}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = buildImageUrl(null);
+                    }}
                   />
                 </div>
                 <div className="flex-1">
@@ -187,7 +234,6 @@ export function CartDrawer() {
 
             <div className="space-y-2">
               <Label className="text-sm">Tipo de pedido</Label>
-              {/* Alterado para grid-cols-2 – botões organizados sem coluna vazia */}
               <div className="grid grid-cols-2 gap-1.5">
                 <Button
                   variant={orderType === 'retirada' ? 'default' : 'outline'}
@@ -214,6 +260,35 @@ export function CartDrawer() {
                 selectedId={selectedAddressId}
                 onSelect={setSelectedAddressId}
               />
+            )}
+
+            {orderType === 'mesa' && (
+              <div className="space-y-2">
+                <Label className="text-sm">Selecionar mesa</Label>
+                <p className="text-xs text-muted-foreground">
+                  Escolha uma mesa disponível para este pedido.
+                </p>
+                {availableTables.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-gray-300 bg-white p-3 text-center text-sm text-muted-foreground">
+                    Nenhuma mesa disponível no momento.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2">
+                    {availableTables.map((table) => (
+                      <Button
+                        key={table.id}
+                        type="button"
+                        variant={selectedTableId === table.id ? 'default' : 'outline'}
+                        onClick={() => setSelectedTableId(table.id)}
+                        className="h-auto min-h-14 flex-col py-2 text-xs"
+                      >
+                        <span className="text-sm font-bold">Mesa {table.numero}</span>
+                        <span className="text-[10px] opacity-80">{table.capacidade} pessoas</span>
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
 
             <Button

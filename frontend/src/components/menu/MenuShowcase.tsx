@@ -3,6 +3,7 @@ import { useMenuItems, useMenuCategories } from '@/hooks/useApi';
 import { MenuItem as ApiMenuItem } from '@/types/restaurant';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProductCard } from './ProductCard';
+import { buildImageUrl } from '@/services/api';
 
 interface MenuCardItem {
   id: string;
@@ -15,34 +16,13 @@ interface MenuCardItem {
 }
 
 const adaptMenuItem = (item: ApiMenuItem): MenuCardItem => {
-  const buildApiBaseUrl = (): string => {
-    const rawBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-    let base = rawBase;
-
-    if (base.startsWith('/')) {
-      base = `${window.location.origin}${base}`;
-    }
-
-    base = base.replace(/\/api\/?$/, '');
-    return base.replace(/\/$/, '');
-  };
-
-  let imageUrl: string | undefined = undefined;
-  if (item.imagem) {
-    if (item.imagem.startsWith('http')) {
-      imageUrl = item.imagem;
-    } else {
-      const cleanPath = item.imagem.startsWith('/') ? item.imagem : `/${item.imagem}`;
-      imageUrl = `${buildApiBaseUrl()}${cleanPath}`;
-    }
-  }
   return {
     id: item.id,
     name: item.nome,
     description: item.descricao || 'Prato delicioso preparado especialmente para você.',
     price: typeof item.preco_kz === 'number' ? item.preco_kz : parseFloat(String(item.preco_kz || 0)),
     originalPrice: item.preco_promocional_kz ? parseFloat(String(item.preco_promocional_kz)) : undefined,
-    image: imageUrl,
+    image: buildImageUrl(item.imagem),
     categoryId: String(item.categoria_id ?? 'outros'),
   };
 };

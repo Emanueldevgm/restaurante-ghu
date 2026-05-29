@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 const reservationSchema = z.object({
   nome_cliente: z.string().min(3, 'Nome obrigatório'),
   telefone_cliente: z.string().min(7, 'Telefone obrigatório'),
-  email_cliente: z.string().email('Email inválido').optional(),
+  email_cliente: z.string().email('Email inválido').optional().or(z.literal('')),
   quantidade_pessoas: z.number().int().min(1).max(20),
   data_reserva: z.date(),
   hora_reserva: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Hora inválida'),
@@ -61,9 +61,8 @@ export function ReservationDialog({ open, onOpenChange, mesaId, mesaNumero, capa
   });
 
   const dataReserva = watch('data_reserva');
-  const horaReserva = watch('hora_reserva');
 
-  const onSubmit = (data: ReservationFormData) => {
+  const onSubmit = (data: ReservationFormData): void => {
     if (!isAuthenticated) {
       toast.error('Você precisa estar logado para fazer uma reserva');
       return;
@@ -73,19 +72,18 @@ export function ReservationDialog({ open, onOpenChange, mesaId, mesaNumero, capa
       mesa_id: mesaId,
       nome_cliente: data.nome_cliente,
       telefone_cliente: data.telefone_cliente,
-      email_cliente: data.email_cliente,
+      email_cliente: data.email_cliente || undefined,
       quantidade_pessoas: data.quantidade_pessoas,
       data_reserva: format(data.data_reserva, 'yyyy-MM-dd'),
       hora_reserva: data.hora_reserva,
-      observacoes: data.observacoes,
+      observacoes: data.observacoes || undefined,
     }, {
       onSuccess: () => {
         toast.success(`Mesa ${mesaNumero} reservada com sucesso!`);
         onOpenChange(false);
         reset();
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onError: (error: any) => {
+      onError: (error: { response?: { data?: { message?: string } } }) => {
         toast.error(error.response?.data?.message || 'Erro ao criar reserva');
       },
     });
@@ -131,7 +129,7 @@ export function ReservationDialog({ open, onOpenChange, mesaId, mesaNumero, capa
                 <Calendar
                   mode="single"
                   selected={dataReserva}
-                  onSelect={(date) => setValue('data_reserva', date!)}
+                  onSelect={(date) => date && setValue('data_reserva', date)}
                   initialFocus
                   disabled={(date) => date < new Date()}
                 />

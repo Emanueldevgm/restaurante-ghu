@@ -135,7 +135,7 @@ interface UserData {
 }
 
 export function AdminDashboard() {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const { logs, clearLogs } = useAccessLog();
   const navigate = useNavigate();
   const ordersTabRef = useRef<HTMLButtonElement>(null);
@@ -189,6 +189,23 @@ export function AdminDashboard() {
     senha: '',
   });
 
+  // =============================================
+  // 🔑 PROTECÇÃO: Loader enquanto o AuthContext carrega
+  // =============================================
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-sm text-muted-foreground">A carregar painel de administração...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // =============================================
+  // 🔑 PROTECÇÃO: Redireciona se não for admin (após loading)
+  // =============================================
   if (!user || user.role !== 'admin') {
     return <Navigate to="/auth" replace />;
   }
@@ -360,7 +377,7 @@ export function AdminDashboard() {
         <div className="container mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-white/20 p-1 rounded-full">
-              <Logo size="md" variant="icon" />
+              <Logo size="sm" variant="icon" />
             </div>
             <div>
               <h1 className="font-display text-xl font-bold">Painel Admin</h1>
@@ -425,12 +442,6 @@ export function AdminDashboard() {
                   <p className="text-sm text-gray-600 mb-2">Pedidos Hoje</p>
                   <p className="text-3xl font-bold">{totalPedidosHoje}</p>
                   <p className="text-xs mt-2 text-orange-600">{pedidosPendentes} pendentes</p>
-                </CardContent>
-              </Card>
-              <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-                <CardContent className="p-6">
-                  <p className="text-sm text-gray-600 mb-2">Ticket Médio</p>
-                  <p className="text-3xl font-bold">{ticketMedio.toFixed(0)} Kz</p>
                 </CardContent>
               </Card>
               <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
@@ -707,9 +718,8 @@ export function AdminDashboard() {
           {/* ============ ANALYTICS TAB ============ */}
           <TabsContent value="analytics" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 mb-1">Receita Total</p><p className="text-2xl font-bold text-green-600">{orders.reduce((sum: number, order: any) => sum + orderTotal(order), 0).toLocaleString()} Kz</p></div><DollarSign className="h-8 w-8 text-green-600" /></div></CardContent></Card>
+              <Card><CardContent className="p-6"><div className="flex items-start justify-between gap-3 w-full"><div className="min-w-0 flex-1"><p className="text-sm text-gray-600 mb-1">Receita Total</p><p className="text-[clamp(1.1rem,2.4vw,1.5rem)] font-bold text-green-600 leading-tight tabular-nums break-words">{orders.reduce((sum: number, order: any) => sum + orderTotal(order), 0).toLocaleString()} Kz</p></div><DollarSign className="h-8 w-8 text-green-600 shrink-0" /></div></CardContent></Card>
               <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 mb-1">Pedidos Totais</p><p className="text-2xl font-bold text-blue-600">{orders.length}</p></div><Package className="h-8 w-8 text-blue-600" /></div></CardContent></Card>
-              <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 mb-1">Ticket Médio</p><p className="text-2xl font-bold text-purple-600">{orders.length > 0 ? Math.round(orders.reduce((sum: number, order: any) => sum + orderTotal(order), 0) / orders.length) : 0} Kz</p></div><TrendingUp className="h-8 w-8 text-purple-600" /></div></CardContent></Card>
               <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 mb-1">Mesas Ocupadas</p><p className="text-2xl font-bold text-orange-600">{tables.filter((t: any) => t.status === 'occupied').length}/{tables.length}</p></div><Table2 className="h-8 w-8 text-orange-600" /></div></CardContent></Card>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
