@@ -1,11 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { z } from 'zod';
 import dotenv from 'dotenv';
-import path from 'path';
 
-// Carregar variáveis de ambiente
+// Carregar variáveis de ambiente do ficheiro .env (se existir)
+// Em produção (Render), as variáveis já estão no ambiente, por isso não falha
 dotenv.config();
-const envFile = path.resolve(process.cwd(), `.env.${process.env.NODE_ENV || 'production'}`);
-dotenv.config({ path: envFile });
 
 // Schema de validação
 const EnvSchema = z.object({
@@ -21,7 +20,7 @@ const EnvSchema = z.object({
     DB_NAME: z.string().default('restaurante_angola_db'),
     DB_SSL: z.coerce.boolean().default(false),
     
-    // JWT - em produção exige 32 caracteres, em dev aceita qualquer
+    // JWT
     JWT_SECRET: z.string().min(1, 'JWT_SECRET é obrigatório'),
     JWT_EXPIRES_IN: z.string().default('7d'),
     JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),

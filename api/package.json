@@ -1,8 +1,5 @@
 {
-    "name": "restaurante-ghu-api",
-    "version": "1.0.0",
-    "description": "API REST para Sistema de Gestão de Restaurante - Grande Hotel do Uíge",
-    "main": "dist/server.js",
+    
     "scripts": {
         "dev": "tsx watch src/server.ts",
         "build": "tsc",
