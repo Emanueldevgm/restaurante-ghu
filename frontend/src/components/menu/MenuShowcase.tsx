@@ -14,15 +14,38 @@ interface MenuCardItem {
   categoryId: string;
 }
 
-const adaptMenuItem = (item: ApiMenuItem): MenuCardItem => ({
-  id: item.id,
-  name: item.nome,
-  description: item.descricao || 'Prato delicioso preparado especialmente para voce.',
-  price: typeof item.preco_kz === 'number' ? item.preco_kz : parseFloat(String(item.preco_kz || 0)),
-  originalPrice: item.preco_promocional_kz ? parseFloat(String(item.preco_promocional_kz)) : undefined,
-  image: item.imagem || undefined,
-  categoryId: String(item.categoria_id ?? 'outros'),
-});
+const adaptMenuItem = (item: ApiMenuItem): MenuCardItem => {
+  const buildApiBaseUrl = (): string => {
+    const rawBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+    let base = rawBase;
+
+    if (base.startsWith('/')) {
+      base = `${window.location.origin}${base}`;
+    }
+
+    base = base.replace(/\/api\/?$/, '');
+    return base.replace(/\/$/, '');
+  };
+
+  let imageUrl: string | undefined = undefined;
+  if (item.imagem) {
+    if (item.imagem.startsWith('http')) {
+      imageUrl = item.imagem;
+    } else {
+      const cleanPath = item.imagem.startsWith('/') ? item.imagem : `/${item.imagem}`;
+      imageUrl = `${buildApiBaseUrl()}${cleanPath}`;
+    }
+  }
+  return {
+    id: item.id,
+    name: item.nome,
+    description: item.descricao || 'Prato delicioso preparado especialmente para você.',
+    price: typeof item.preco_kz === 'number' ? item.preco_kz : parseFloat(String(item.preco_kz || 0)),
+    originalPrice: item.preco_promocional_kz ? parseFloat(String(item.preco_promocional_kz)) : undefined,
+    image: imageUrl,
+    categoryId: String(item.categoria_id ?? 'outros'),
+  };
+};
 
 export function MenuShowcase() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -38,7 +61,6 @@ export function MenuShowcase() {
         nome: category.nome || category.name || 'Categoria',
       }));
     }
-
     return [
       { id: 'entrada', nome: 'Entradas' },
       { id: 'principal', nome: 'Pratos Principais' },
@@ -48,10 +70,7 @@ export function MenuShowcase() {
   }, [categories]);
 
   const filteredItems = useMemo(() => {
-    if (!selectedCategory) {
-      return menuItems;
-    }
-
+    if (!selectedCategory) return menuItems;
     return menuItems.filter((item) => item.categoryId === selectedCategory);
   }, [menuItems, selectedCategory]);
 
@@ -75,13 +94,12 @@ export function MenuShowcase() {
     <section className="px-4 py-20">
       <div className="container section-shell px-6 py-12 sm:px-10">
         <div className="mb-14 text-center">
-          <span className="text-sm font-bold uppercase tracking-widest text-primary">Cardapio Digital</span>
+          <span className="text-sm font-bold uppercase tracking-widest text-primary">cardápio Digital</span>
           <h2 className="font-display mt-4 mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
             Escolha por categorias
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-            Navegue pelas categorias e encontre pratos com apresentacao mais clara,
-            
+            Navegue pelas categorias e encontre pratos com apresentação mais clara.
           </p>
         </div>
 
@@ -113,9 +131,7 @@ export function MenuShowcase() {
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
           {filteredItems.length > 0 ? (
-            filteredItems.map((item) => (
-              <ProductCard key={item.id} item={item} />
-            ))
+            filteredItems.map((item) => <ProductCard key={item.id} item={item} />)
           ) : (
             <div className="col-span-full py-20 text-center text-muted-foreground">
               Nenhum prato encontrado nesta categoria.

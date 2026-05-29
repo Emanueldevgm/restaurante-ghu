@@ -27,7 +27,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2 text-sm text-blue-100/80">
                 <Mail className="h-4 w-4 text-cyan-300" />
-                contato@grandehoteldouige.ao
+                grandehoteluige@gmail.com
               </li>
               <li className="flex items-start gap-2 text-sm text-blue-100/80">
                 <MapPin className="mt-0.5 h-4 w-4 text-cyan-300" />
@@ -39,7 +39,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="font-display mb-4 text-lg font-semibold">Horarios</h4>
+            <h4 className="font-display mb-4 text-lg font-semibold">Horários</h4>
             <ul className="space-y-2 text-sm text-blue-100/80">
               <li className="flex justify-between">
                 <span>Seg - Qui</span>
@@ -78,7 +78,7 @@ export function Footer() {
         <Separator className="mb-8 bg-white/15" />
 
         <div className="flex flex-col items-center justify-between gap-4 text-sm text-blue-100/60 md:flex-row">
-          <p>© 2024 Grande Hotel do Uige. Todos os direitos reservados.</p>
+          <p>© 2026 Grande Hotel do Uige. Todos os direitos reservados.</p>
           <div className="flex gap-6">
             <a href="#" className="transition-colors hover:text-white">
               Termos de Uso

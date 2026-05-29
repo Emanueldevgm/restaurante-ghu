@@ -1,3 +1,4 @@
+/* eslint-disable comma-dangle */
 import bcrypt from 'bcryptjs';
 
 const SALT_ROUNDS = 10;

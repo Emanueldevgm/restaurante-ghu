@@ -20,6 +20,7 @@ import {
     UnauthorizedError,
     ConflictError,
     NotFoundError,
+    ForbiddenError,
 } from '../middleware/error.middleware';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -100,6 +101,8 @@ export class AuthController {
                 role: userData.role,
             });
 
+            console.log(`[AUTH] ✅ Novo usuário registrado: ${userData.nome_completo} (${userData.email || userData.telefone})`);
+
             res.status(201).json({
                 success: true,
                 message: 'Usuário registrado com sucesso',
@@ -133,34 +136,47 @@ export class AuthController {
             }
 
             let user: Usuario | null = null;
+            let searchField = '';
+
             if (email) {
                 const users = await query<Usuario[]>(
-                    "SELECT * FROM usuarios WHERE email = $1 AND status = 'ativo'",
+                    "SELECT * FROM usuarios WHERE email = $1",
                     [email]
                 );
                 user = users[0] || null;
+                searchField = `email=${email}`;
             } else if (telefone) {
                 const users = await query<Usuario[]>(
-                    "SELECT * FROM usuarios WHERE telefone = $1 AND status = 'ativo'",
+                    "SELECT * FROM usuarios WHERE telefone = $1",
                     [telefone]
                 );
                 user = users[0] || null;
+                searchField = `telefone=${telefone}`;
             }
 
             if (!user) {
-                console.log(`[AUTH] Usuário não encontrado: email=${email}, telefone=${telefone}`);
-                throw new UnauthorizedError('Credenciais inválidas');
+                console.log(`[AUTH] ❌ Falha login - usuário não encontrado: ${searchField}`);
+                throw new UnauthorizedError('Credenciais inválidas. Verifique seu email/telefone e senha.');
+            }
+
+            // Verifica status da conta
+            if (user.status !== 'ativo') {
+                let statusMsg = '';
+                if (user.status === 'bloqueado') statusMsg = 'sua conta está bloqueada. Contacte o administrador.';
+                else if (user.status === 'inativo') statusMsg = 'sua conta está inativa. Contacte o administrador.';
+                else statusMsg = `status da conta: ${user.status}`;
+                console.log(`[AUTH] ❌ Tentativa de login em conta ${user.status}: ${user.nome_completo}`);
+                throw new UnauthorizedError(`Acesso negado: ${statusMsg}`);
             }
 
             const isPasswordValid = await comparePassword(senha, user.senha_hash);
             if (!isPasswordValid) {
-                console.log(`[AUTH] Senha inválida para usuário: ${email || telefone}`);
-                throw new UnauthorizedError('Credenciais inválidas');
+                console.log(`[AUTH] ❌ Senha inválida para usuário: ${user.nome_completo} (${searchField})`);
+                throw new UnauthorizedError('Credenciais inválidas. Verifique sua senha.');
             }
 
-            await query('UPDATE usuarios SET ultimo_acesso = NOW() WHERE id = $1', [
-                user.id,
-            ]);
+            // Atualiza último acesso
+            await query('UPDATE usuarios SET ultimo_acesso = NOW() WHERE id = $1', [user.id]);
 
             const token = generateToken({
                 userId: user.id,
@@ -168,7 +184,7 @@ export class AuthController {
                 role: user.role,
             });
 
-            console.log(`[AUTH] ✅ Login bem-sucedido: ${user.nome_completo}`);
+            console.log(`[AUTH] ✅ Login bem-sucedido: ${user.nome_completo} (${user.role})`);
 
             res.json({
                 success: true,
@@ -190,62 +206,84 @@ export class AuthController {
     }
 
     // Atualizar usuário (admin)
-static async updateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-        const { id } = req.params;
-        const { nome_completo, email, telefone, role, status, data_nascimento, genero } = req.body;
+    static async updateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { id } = req.params;
+            const { nome_completo, email, telefone, role, status, data_nascimento, genero } = req.body;
+            const currentAdminId = (req as any).user?.userId;
 
-        const userResult = await query<Usuario[]>(
-            'SELECT id FROM usuarios WHERE id = $1',
-            [id]
-        );
-        if (!userResult[0]) throw new NotFoundError('Usuário');
+            // Impedir que o admin desative ou rebaixe a si mesmo
+            if (id === currentAdminId) {
+                // Permite apenas alterar dados não sensíveis, mas bloqueia mudança de role/status
+                if (role && role !== 'administrador') {
+                    throw new ForbiddenError('Não é possível alterar sua própria função de administrador.');
+                }
+                if (status && status !== 'ativo') {
+                    throw new ForbiddenError('Não é possível desativar/bloquear a própria conta.');
+                }
+            }
 
-        if (email) {
-            const existing = await query<Usuario[]>(
-                'SELECT id FROM usuarios WHERE email = $1 AND id != $2',
-                [email, id]
+            const userResult = await query<Usuario[]>(
+                'SELECT id, role FROM usuarios WHERE id = $1',
+                [id]
             );
-            if (existing.length > 0) throw new ConflictError('Este email já está em uso');
+            if (!userResult[0]) throw new NotFoundError('Usuário não encontrado');
+
+            if (email) {
+                const existing = await query<Usuario[]>(
+                    'SELECT id FROM usuarios WHERE email = $1 AND id != $2',
+                    [email, id]
+                );
+                if (existing.length > 0) throw new ConflictError('Este email já está em uso');
+            }
+
+            await query(
+                `UPDATE usuarios SET 
+                    nome_completo = COALESCE($1, nome_completo),
+                    email = COALESCE($2, email),
+                    telefone = COALESCE($3, telefone),
+                    role = COALESCE($4, role),
+                    status = COALESCE($5, status),
+                    data_nascimento = COALESCE($6, data_nascimento),
+                    genero = COALESCE($7, genero),
+                    updated_at = NOW()
+                WHERE id = $8`,
+                [nome_completo, email, telefone, role, status, data_nascimento, genero, id]
+            );
+
+            console.log(`[ADMIN] Usuário ${id} atualizado por ${currentAdminId}`);
+            res.json({ success: true, message: 'Usuário atualizado com sucesso' });
+        } catch (error) {
+            next(error);
         }
-
-        await query(
-            `UPDATE usuarios SET 
-                nome_completo = COALESCE($1, nome_completo),
-                email = COALESCE($2, email),
-                telefone = COALESCE($3, telefone),
-                role = COALESCE($4, role),
-                status = COALESCE($5, status),
-                data_nascimento = COALESCE($6, data_nascimento),
-                genero = COALESCE($7, genero),
-                updated_at = NOW()
-            WHERE id = $8`,
-            [nome_completo, email, telefone, role, status, data_nascimento, genero, id]
-        );
-
-        res.json({ success: true, message: 'Usuário atualizado com sucesso' });
-    } catch (error) {
-        next(error);
     }
-}
 
-// Deletar usuário (admin)
-static async deleteUser(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-        const { id } = req.params;
-        const userResult = await query<Usuario[]>(
-            'SELECT id FROM usuarios WHERE id = $1',
-            [id]
-        );
-        if (!userResult[0]) throw new NotFoundError('Usuário');
+    // Deletar usuário (admin)
+    static async deleteUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { id } = req.params;
+            const currentAdminId = (req as any).user?.userId;
 
-        await query('DELETE FROM usuarios WHERE id = $1', [id]);
+            if (id === currentAdminId) {
+                throw new ForbiddenError('Não é possível eliminar a própria conta de administrador.');
+            }
 
-        res.json({ success: true, message: 'Usuário eliminado com sucesso' });
-    } catch (error) {
-        next(error);
+            const userResult = await query<Usuario[]>(
+                'SELECT id FROM usuarios WHERE id = $1',
+                [id]
+            );
+            if (!userResult[0]) throw new NotFoundError('Usuário não encontrado');
+
+            // Verificar se o usuário tem pedidos ou reservas antes de deletar? (opcional, mas boa prática)
+            // Neste caso, vamos apenas deletar (cascade no DB cuida das referências)
+            await query('DELETE FROM usuarios WHERE id = $1', [id]);
+
+            console.log(`[ADMIN] Usuário ${id} eliminado por ${currentAdminId}`);
+            res.json({ success: true, message: 'Usuário eliminado com sucesso' });
+        } catch (error) {
+            next(error);
+        }
     }
-}
 
     // Obter perfil do usuário autenticado
     static async getProfile(
@@ -349,11 +387,12 @@ static async deleteUser(req: Request, res: Response, next: NextFunction): Promis
             }
 
             const users = await query<Usuario[]>(
-                'SELECT id FROM usuarios WHERE email = $1',
+                'SELECT id, nome_completo FROM usuarios WHERE email = $1',
                 [email]
             );
 
             if (users.length === 0) {
+                // Por segurança, não revelamos se o email existe
                 res.json({
                     success: true,
                     message: 'Se o email estiver cadastrado, receberá um link de recuperação.',
@@ -374,12 +413,13 @@ static async deleteUser(req: Request, res: Response, next: NextFunction): Promis
             await sendEmail(
                 email,
                 'Redefinição de Senha - Restaurante GHU',
-                `<p>Olá,</p>
+                `<p>Olá ${users[0].nome_completo},</p>
        <p>Recebemos uma solicitação para redefinir sua senha. Clique no link abaixo para continuar:</p>
        <p><a href="${resetLink}" style="display:inline-block;padding:10px 20px;background:#2563EB;color:#fff;border-radius:5px;text-decoration:none;">Redefinir Senha</a></p>
        <p>Se não foi você, ignore este email. O link expira em 1 hora.</p>`
             );
 
+            console.log(`[AUTH] Link de redefinição enviado para ${email}`);
             res.json({
                 success: true,
                 message: 'Se o email estiver cadastrado, receberá um link de recuperação.',
@@ -399,6 +439,9 @@ static async deleteUser(req: Request, res: Response, next: NextFunction): Promis
             if (!token || !newPassword) {
                 throw new BadRequestError('Token e nova senha são obrigatórios.');
             }
+            if (newPassword.length < 6) {
+                throw new BadRequestError('A nova senha deve ter pelo menos 6 caracteres.');
+            }
 
             const resets = await query<any[]>(
                 'SELECT * FROM password_resets WHERE token = $1 AND expires_at > NOW() AND used = FALSE',
@@ -415,6 +458,7 @@ static async deleteUser(req: Request, res: Response, next: NextFunction): Promis
             await query('UPDATE usuarios SET senha_hash = $1 WHERE email = $2', [hashedPassword, reset.email]);
             await query('UPDATE password_resets SET used = TRUE WHERE id = $1', [reset.id]);
 
+            console.log(`[AUTH] Senha redefinida para ${reset.email}`);
             res.json({
                 success: true,
                 message: 'Senha atualizada com sucesso.',
@@ -424,7 +468,7 @@ static async deleteUser(req: Request, res: Response, next: NextFunction): Promis
         }
     }
 
-    // Alterar senha
+    // Alterar senha (usuário logado)
     static async changePassword(
         req: Request,
         res: Response,
@@ -602,6 +646,8 @@ static async deleteUser(req: Request, res: Response, next: NextFunction): Promis
 
             const user = userResult[0];
 
+            console.log(`[ADMIN] Novo usuário criado por ${(req as any).user?.userId}: ${user.nome_completo} (${user.role})`);
+
             res.status(201).json({
                 success: true,
                 message: 'Usuário criado com sucesso',
@@ -641,18 +687,28 @@ static async deleteUser(req: Request, res: Response, next: NextFunction): Promis
 
             const { id } = req.params;
             const { status } = req.body;
+            const currentAdminId = (req as any).user?.userId;
+
+            if (id === currentAdminId) {
+                throw new ForbiddenError('Não é possível alterar o status da própria conta de administrador.');
+            }
 
             if (!['ativo', 'inativo', 'bloqueado'].includes(status)) {
-                throw new BadRequestError('Status inválido');
+                throw new BadRequestError('Status inválido. Use: ativo, inativo, bloqueado.');
             }
 
             const existingUser = await query<Usuario[]>(
-                'SELECT id FROM usuarios WHERE id = $1',
+                'SELECT id, role FROM usuarios WHERE id = $1',
                 [id]
             );
 
             if (!existingUser[0]) {
-                throw new BadRequestError('Usuário não encontrado');
+                throw new NotFoundError('Usuário não encontrado');
+            }
+
+            // Impedir que um admin bloqueie outro admin (exceto se for ele mesmo, já barrado acima)
+            if (existingUser[0].role === 'administrador' && status !== 'ativo') {
+                throw new ForbiddenError('Não é possível bloquear ou inativar outro administrador.');
             }
 
             await query(
@@ -660,9 +716,10 @@ static async deleteUser(req: Request, res: Response, next: NextFunction): Promis
                 [status, id]
             );
 
+            console.log(`[ADMIN] Status do usuário ${id} alterado para ${status} por ${currentAdminId}`);
             res.json({
                 success: true,
-                message: 'Status do usuário atualizado com sucesso',
+                message: `Status do usuário atualizado para ${status}`,
             });
         } catch (error) {
             next(error);

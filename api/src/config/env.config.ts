@@ -1,8 +1,11 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
+import path from 'path';
 
 // Carregar variáveis de ambiente
 dotenv.config();
+const envFile = path.resolve(process.cwd(), `.env.${process.env.NODE_ENV || 'production'}`);
+dotenv.config({ path: envFile });
 
 // Schema de validação
 const EnvSchema = z.object({

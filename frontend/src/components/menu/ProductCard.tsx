@@ -22,6 +22,7 @@ export function ProductCard({ item }: ProductCardProps) {
   const { addItem } = useCart();
 
   const handleAdd = () => {
+    // Criar objeto MenuItem com todas as propriedades obrigatórias
     const adaptedItem: MenuItem = {
       id: item.id,
       categoria_id: item.categoryId,
@@ -31,6 +32,7 @@ export function ProductCard({ item }: ProductCardProps) {
       preco_kz: item.price,
       preco_promocional_kz: item.originalPrice ?? null,
       tempo_preparo: null,
+      calorias: null,           // 🔧 ADICIONADO
       vegetariano: false,
       vegano: false,
       sem_gluten: false,
@@ -48,13 +50,20 @@ export function ProductCard({ item }: ProductCardProps) {
     ? Math.round((1 - item.price / item.originalPrice) * 100)
     : null;
 
+  // URL da imagem com fallback
+  const imageUrl = item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500';
+
   return (
     <Card className="group relative overflow-hidden border border-white/80 bg-white/95 shadow-elegant transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
       <div className="relative h-56 overflow-hidden">
         <img
-          src={item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'}
+          src={imageUrl}
           alt={item.name}
           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+          onError={(e) => {
+            // Fallback em caso de erro na imagem
+            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500';
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
 
@@ -82,11 +91,17 @@ export function ProductCard({ item }: ProductCardProps) {
       </div>
 
       <CardContent className="p-5">
-        <h3 className="font-display mb-2 text-xl font-bold transition-colors group-hover:text-primary">{item.name}</h3>
-        <p className="mb-4 line-clamp-2 text-sm text-muted-foreground">{item.description}</p>
+        <h3 className="font-display mb-2 text-xl font-bold transition-colors group-hover:text-primary">
+          {item.name}
+        </h3>
+        <p className="mb-4 line-clamp-2 text-sm text-muted-foreground">
+          {item.description}
+        </p>
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-2xl font-bold text-primary">{item.price.toFixed(0)} Kz</span>
+            <span className="text-2xl font-bold text-primary">
+              {item.price.toFixed(0)} Kz
+            </span>
             {item.originalPrice && (
               <span className="ml-2 text-sm text-muted-foreground line-through">
                 {item.originalPrice.toFixed(0)} Kz

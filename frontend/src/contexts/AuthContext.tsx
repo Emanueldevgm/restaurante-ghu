@@ -1,20 +1,19 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authApi, type User as ApiUser } from '@/services/api';
 import { toast } from 'sonner';
 
-// Verificar se localStorage está disponível
 const isLocalStorageAvailable = (): boolean => {
   try {
     const test = '__localStorage_test__';
     localStorage.setItem(test, test);
     localStorage.removeItem(test);
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 };
 
-// Adapter para compatibilidade com tipos antigos do frontend
 export interface User {
   id: string;
   name: string;
@@ -27,7 +26,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string, telefone?: string) => Promise<boolean>;
+  login: (emailOrPhone: string, password: string) => Promise<boolean>;
   logout: () => void;
   register: (name: string, email: string, password: string, telefone: string) => Promise<boolean>;
   isLoading: boolean;
@@ -35,32 +34,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Função para converter usuário da API para formato do frontend
 const adaptUser = (apiUser: ApiUser): User => {
   let role: User['role'] = 'client';
-
   switch (apiUser.role) {
-    case 'administrador':
-      role = 'admin';
-      break;
-    case 'gerente':
-      role = 'manager';
-      break;
-    case 'garcom':
-      role = 'waiter';
-      break;
-    case 'cozinha':
-      role = 'kitchen';
-      break;
-    case 'entregador':
-      role = 'delivery';
-      break;
-    case 'cliente':
-    default:
-      role = 'client';
-      break;
+    case 'administrador': role = 'admin'; break;
+    case 'gerente': role = 'manager'; break;
+    case 'garcom': role = 'waiter'; break;
+    case 'cozinha': role = 'kitchen'; break;
+    case 'entregador': role = 'delivery'; break;
+    default: role = 'client';
   }
-
   return {
     id: apiUser.id,
     name: apiUser.nome_completo,
@@ -75,86 +58,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Carregar usuário do localStorage ao iniciar
   useEffect(() => {
     const loadUser = async () => {
       try {
         if (!isLocalStorageAvailable()) {
-          console.warn('localStorage não está disponível');
           setIsLoading(false);
           return;
         }
-
-        const storedUser = localStorage.getItem('restaurant_user');
         const token = localStorage.getItem('restaurant_token');
-
-        if (storedUser && token) {
-          // Validar token com a API
-          try {
-            const response = await authApi.getProfile();
-            if (response.success && response.data) {
-              setUser(adaptUser(response.data));
-            }
-          } catch (error) {
-            // Token inválido, limpar localStorage
-            try {
-              localStorage.removeItem('restaurant_user');
-              localStorage.removeItem('restaurant_token');
-            } catch (e) {
-              // Ignorar erro ao limpar
-            }
-            setUser(null);
+        if (token) {
+          const response = await authApi.getProfile();
+          if (response.success && response.data) {
+            setUser(adaptUser(response.data));
+          } else {
+            localStorage.removeItem('restaurant_token');
+            localStorage.removeItem('restaurant_user');
           }
         }
       } catch (error) {
         console.error('Erro ao carregar usuário:', error);
+        localStorage.removeItem('restaurant_token');
+        localStorage.removeItem('restaurant_user');
       } finally {
         setIsLoading(false);
       }
     };
-
     loadUser();
   }, []);
 
-  const login = async (email: string, password: string, telefone?: string): Promise<boolean> => {
+  const login = async (emailOrPhone: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-
-      // A API aceita email OU telefone
+      // Determina se o campo é email ou telefone (simples heurística)
+      const isEmail = emailOrPhone.includes('@');
       const response = await authApi.login(
-        email || '',
-        telefone || '',
+        isEmail ? emailOrPhone : '',
+        !isEmail ? emailOrPhone : '',
         password
       );
-
       if (response.success && response.data) {
         const { token, user: apiUser } = response.data;
-
-        // Salvar token e usuário com proteção
-        try {
-          if (isLocalStorageAvailable()) {
-            localStorage.setItem('restaurant_token', token);
-            const adaptedUser = adaptUser(apiUser);
-            localStorage.setItem('restaurant_user', JSON.stringify(adaptedUser));
-          }
-        } catch (storageError) {
-          console.warn('Não foi possível salvar no localStorage:', storageError);
+        if (isLocalStorageAvailable()) {
+          localStorage.setItem('restaurant_token', token);
+          const adaptedUser = adaptUser(apiUser);
+          localStorage.setItem('restaurant_user', JSON.stringify(adaptedUser));
         }
-
-        const adaptedUser = adaptUser(apiUser);
-        setUser(adaptedUser);
-
+        setUser(adaptUser(apiUser));
         toast.success('Login realizado com sucesso!');
         return true;
       }
-
       toast.error(response.message || 'Erro ao fazer login');
       return false;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Erro no login:', error);
-      const errorMessage = error.response?.data?.message || 'Erro ao fazer login. Verifique suas credenciais.';
-      toast.error(errorMessage);
+      const msg = error.response?.data?.message || 'Credenciais inválidas. Verifique email/telefone e senha.';
+      toast.error(msg);
       return false;
     } finally {
       setIsLoading(false);
@@ -163,61 +121,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setUser(null);
-    try {
-      if (isLocalStorageAvailable()) {
-        localStorage.removeItem('restaurant_user');
-        localStorage.removeItem('restaurant_token');
-      }
-    } catch (error) {
-      console.warn('Erro ao limpar localStorage:', error);
+    if (isLocalStorageAvailable()) {
+      localStorage.removeItem('restaurant_user');
+      localStorage.removeItem('restaurant_token');
     }
     toast.info('Logout realizado com sucesso');
+    // Força recarregamento da página para garantir limpeza de estado
+    window.location.href = '/auth';
   };
 
-  const register = async (
-    name: string,
-    email: string,
-    password: string,
-    telefone: string
-  ): Promise<boolean> => {
+  const register = async (name: string, email: string, password: string, telefone: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-
       const response = await authApi.register({
         nome_completo: name,
         telefone,
-        email,
+        email: email || undefined,
         senha: password,
       });
-
       if (response.success && response.data) {
         const { token, user: apiUser } = response.data;
-
-        // Salvar token e usuário com proteção
-        try {
-          if (isLocalStorageAvailable()) {
-            localStorage.setItem('restaurant_token', token);
-            const adaptedUser = adaptUser(apiUser);
-            localStorage.setItem('restaurant_user', JSON.stringify(adaptedUser));
-          }
-        } catch (storageError) {
-          console.warn('Não foi possível salvar no localStorage:', storageError);
+        if (isLocalStorageAvailable()) {
+          localStorage.setItem('restaurant_token', token);
+          localStorage.setItem('restaurant_user', JSON.stringify(adaptUser(apiUser)));
         }
-
-        const adaptedUser = adaptUser(apiUser);
-        setUser(adaptedUser);
-
+        setUser(adaptUser(apiUser));
         toast.success('Cadastro realizado com sucesso!');
         return true;
       }
-
       toast.error(response.message || 'Erro ao fazer cadastro');
       return false;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Erro no registro:', error);
-      const errorMessage = error.response?.data?.message || 'Erro ao fazer cadastro. Tente novamente.';
-      toast.error(errorMessage);
+      const msg = error.response?.data?.message || 'Erro ao cadastrar. Verifique se o telefone já está cadastrado.';
+      toast.error(msg);
       return false;
     } finally {
       setIsLoading(false);
@@ -225,16 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        login,
-        logout,
-        register,
-        isLoading
-      }}
-    >
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, register, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
@@ -242,8 +170,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }

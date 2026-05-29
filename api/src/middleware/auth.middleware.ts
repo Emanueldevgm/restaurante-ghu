@@ -1,3 +1,5 @@
+/* eslint-disable comma-dangle */
+/* eslint-disable @typescript-eslint/no-namespace */
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken, JwtPayload } from '../utils/jwt.util';
 

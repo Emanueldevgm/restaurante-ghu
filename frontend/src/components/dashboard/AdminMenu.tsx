@@ -54,7 +54,6 @@ export function AdminMenu() {
     picante: false, destaque: false, prato_do_dia: false,
   });
 
-  // Estado para o ficheiro de imagem
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [existingImage, setExistingImage] = useState<string | null>(null);
@@ -79,32 +78,22 @@ export function AdminMenu() {
     }
   };
 
-  // ===== UPLOAD DE IMAGEM =====
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Validar tipo de ficheiro
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif'];
     if (!allowedTypes.includes(file.type)) {
       toast.error('Formato inválido. Use JPG, PNG, WebP ou GIF');
       return;
     }
-
-    // Validar tamanho (máximo 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('Imagem muito grande. Máximo 5MB');
       return;
     }
-
     setImageFile(file);
     setExistingImage(null);
-
-    // Criar preview
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string);
-    };
+    reader.onloadend = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
   };
 
@@ -112,12 +101,9 @@ export function AdminMenu() {
     setImageFile(null);
     setImagePreview(null);
     setExistingImage(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // ===== ITENS DO CARDÁPIO =====
   const handleOpenDialog = (item?: MenuItem) => {
     if (item) {
       setEditingItem(item);
@@ -156,8 +142,8 @@ export function AdminMenu() {
 
       setIsSaving(true);
 
-      // Se tem ficheiro de imagem, usar FormData
       if (imageFile) {
+        // Upload com imagem nova
         const formDataToSend = new FormData();
         formDataToSend.append('imagem', imageFile);
         formDataToSend.append('categoria_id', formData.categoria_id);
@@ -182,7 +168,7 @@ export function AdminMenu() {
           toast.success('Item criado com sucesso');
         }
       } else {
-        // Sem ficheiro, enviar JSON normal
+        // Sem imagem nova
         const data: any = {
           categoria_id: formData.categoria_id,
           nome: formData.nome,
@@ -199,8 +185,8 @@ export function AdminMenu() {
           prato_do_dia: formData.prato_do_dia,
         };
 
-        // Se removeu a imagem
-        if (existingImage === null && editingItem) {
+        // IMPORTANTE: Se o usuário removeu a imagem (existingImage === null e editingItem existe)
+        if (editingItem && existingImage === null) {
           data.imagem = null;
         }
 
@@ -246,7 +232,6 @@ export function AdminMenu() {
     }
   };
 
-  // ===== CATEGORIAS =====
   const handleOpenCategoryDialog = (category?: Categoria) => {
     if (category) {
       setEditingCategory(category);
@@ -294,10 +279,23 @@ export function AdminMenu() {
     return matchCategory && matchSearch;
   });
 
+  const buildApiBaseUrl = (): string => {
+    const rawBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+    let base = rawBase;
+
+    if (base.startsWith('/')) {
+      base = `${window.location.origin}${base}`;
+    }
+
+    base = base.replace(/\/api\/?$/, '');
+    return base.replace(/\/$/, '');
+  };
+
   const getImageUrl = (imagem: string | null): string | null => {
     if (!imagem) return null;
-    if (imagem.startsWith('http') || imagem.startsWith('/')) return imagem;
-    return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/uploads/${imagem}`;
+    if (imagem.startsWith('http')) return imagem;
+    const cleanPath = imagem.startsWith('/') ? imagem : `/${imagem}`;
+    return `${buildApiBaseUrl()}${cleanPath}`;
   };
 
   if (isLoading) {
@@ -373,16 +371,13 @@ export function AdminMenu() {
             <Card key={item.id} className="hover:shadow-lg transition-shadow">
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-4">
-                  {/* Imagem do item */}
                   {item.imagem && (
                     <div className="flex-shrink-0">
                       <img
                         src={getImageUrl(item.imagem)!}
                         alt={item.nome}
                         className="w-24 h-24 object-cover rounded-lg"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                       />
                     </div>
                   )}
@@ -454,16 +449,13 @@ export function AdminMenu() {
             <div className="col-span-2">
               <Label>Imagem do Prato</Label>
               <div className="mt-2 space-y-3">
-                {/* Preview da imagem */}
                 {(imagePreview || existingImage) && (
                   <div className="relative inline-block">
                     <img
                       src={imagePreview || getImageUrl(existingImage)!}
                       alt="Preview"
                       className="w-32 h-32 object-cover rounded-lg border"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                     />
                     <button
                       onClick={handleRemoveImage}
@@ -473,8 +465,6 @@ export function AdminMenu() {
                     </button>
                   </div>
                 )}
-
-                {/* Botão de upload */}
                 <div className="flex items-center gap-3">
                   <input
                     ref={fileInputRef}
@@ -486,18 +476,11 @@ export function AdminMenu() {
                   />
                   <label htmlFor="imagem-upload">
                     <Button type="button" variant="outline" className="gap-2 cursor-pointer" asChild>
-                      <span>
-                        <Upload className="w-4 h-4" />
-                        {imageFile || existingImage ? 'Alterar Imagem' : 'Selecionar Imagem'}
-                      </span>
+                      <span><Upload className="w-4 h-4" />{imageFile || existingImage ? 'Alterar Imagem' : 'Selecionar Imagem'}</span>
                     </Button>
                   </label>
-                  <span className="text-xs text-muted-foreground">
-                    JPG, PNG, WebP ou GIF (máx. 5MB)
-                  </span>
+                  <span className="text-xs text-muted-foreground">JPG, PNG, WebP ou GIF (máx. 5MB)</span>
                 </div>
-
-                {/* Placeholder se não tem imagem */}
                 {!imagePreview && !existingImage && (
                   <div className="flex items-center justify-center w-32 h-32 bg-gray-100 rounded-lg border border-dashed">
                     <ImageIcon className="w-8 h-8 text-gray-400" />
@@ -510,12 +493,11 @@ export function AdminMenu() {
             <div><Label>Preço Promocional</Label><Input type="number" step="0.01" value={formData.preco_promocional_kz} onChange={(e) => setFormData({ ...formData, preco_promocional_kz: e.target.value })} /></div>
             <div><Label>Tempo Preparo (min)</Label><Input type="number" value={formData.tempo_preparo} onChange={(e) => setFormData({ ...formData, tempo_preparo: e.target.value })} /></div>
             <div><Label>Calorias</Label><Input type="number" value={formData.calorias} onChange={(e) => setFormData({ ...formData, calorias: e.target.value })} /></div>
-            {/* Flags removidas do modal de criação/edição conforme solicitado */}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSaveItem} disabled={isSaving}>
-              {isSaving ? <Loader className="w-4 h-4 animate-spin mr-2" /> : null}
+              {isSaving && <Loader className="w-4 h-4 animate-spin mr-2" />}
               {editingItem ? 'Atualizar' : 'Criar'} Item
             </Button>
           </DialogFooter>

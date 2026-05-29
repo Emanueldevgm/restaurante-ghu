@@ -200,9 +200,10 @@ export function AdminDashboard() {
 
   const goToOrdersTab = () => setActiveTab('orders');
 
-  const totalVendasHoje = dailyStats?.faturamento_kz || 0;
-  const totalPedidosHoje = dailyStats?.total_pedidos || 0;
-  const ticketMedio = dailyStats?.ticket_medio_kz || 0;
+  // 🔧 CORREÇÃO: Garantir que os valores sejam números antes de usar .toFixed()
+  const totalVendasHoje = Number(dailyStats?.faturamento_kz) || 0;
+  const totalPedidosHoje = Number(dailyStats?.total_pedidos) || 0;
+  const ticketMedio = Number(dailyStats?.ticket_medio_kz) || 0;
   const pedidosPendentes = orders.filter((o: any) => o.status === 'pendente').length;
   const occupiedTables = tables.filter((t: any) => t.status === 'occupied').length;
 

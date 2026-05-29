@@ -1,9 +1,15 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import app from './app';
 import { testConnection } from './config/database';
 import env from './config/env.config';
+import express from 'express';
+import path from 'path';
 
 const PORT = env.PORT;
+
+// 🔧 CORREÇÃO: Servir arquivos estáticos da pasta uploads na instância principal
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 const startServer = async () => {
     try {

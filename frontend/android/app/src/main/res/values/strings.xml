@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Restaurante GHU</string>
+    <string name="title_activity_main">Restaurante GHU</string>
+    <string name="package_name">com.restaurante.ghu</string>
+    <string name="custom_url_scheme">com.restaurante.ghu</string>
+</resources>
