@@ -11,9 +11,8 @@ const pool = new Pool({
     password: env.DB_PASSWORD,
     database: env.DB_NAME,
     max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
-    // SSL para Render (produção)
+    idleTimeoutMillis: 60000,       // 60 segundos (era 30000)
+    connectionTimeoutMillis: 15000, // 15 segundos (era 5000)
     ssl: env.DB_SSL ? { rejectUnauthorized: false } : false,
 });
 

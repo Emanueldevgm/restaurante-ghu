@@ -8,6 +8,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
  * 2. http://localhost:10000/api (desenvolvimento local)
  */
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:10000/api';
+const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL;
 
 const api = axios.create({
   baseURL: API_URL,
@@ -226,10 +227,15 @@ export const buildImageUrl = (imagem: string | null | undefined): string => {
   if (imagem.startsWith('http')) {
     return imagem;
   }
-  // Constrói URL a partir da base da API (remove o /api final)
-  const baseUrl = API_URL.replace(/\/api\/?$/, '');
+
+  const imageBaseUrl = IMAGE_BASE_URL || API_URL.replace(/\/?api\/?$/, '');
   const cleanPath = imagem.startsWith('/') ? imagem : `/${imagem}`;
-  return `${baseUrl}${cleanPath}`;
+
+  if (import.meta.env.PROD && /localhost|127\.0\.0\.1/.test(imageBaseUrl)) {
+    return cleanPath;
+  }
+
+  return `${imageBaseUrl}${cleanPath}`;
 };
 
 // =============================================

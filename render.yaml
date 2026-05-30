@@ -27,6 +27,12 @@ services:
       - key: JWT_EXPIRES_IN
         value: 7d
       - key: CORS_ORIGIN
-        value: "*"
+        value: https://restaurante-ghu.vercel.app
       - key: FRONTEND_URL
         value: https://restaurante-ghu.vercel.app
+      - key: CLOUDINARY_CLOUD_NAME
+        value: dyoqo6g3e
+      - key: CLOUDINARY_API_KEY
+        value: 754839796795938
+      - key: CLOUDINARY_API_SECRET
+        value: SU_9qU1LKePo0K6Nap3lrdMUdOk

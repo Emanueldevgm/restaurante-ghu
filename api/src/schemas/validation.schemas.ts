@@ -287,13 +287,15 @@ export const CreatePedidoDTOSchema = z
 // ============ RESERVATION SCHEMAS ============
 
 export const CreateReservacionDTOSchema = z.object({
-  mesa_id: z.string().uuid('ID da mesa inválido'),
-  data_reserva: z.coerce.date().min(new Date(), 'Data deve ser no futuro'),
+  mesa_id: z.string().uuid('ID da mesa inválido').optional(),
+  nome_cliente: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
+  telefone_cliente: z.string().min(7, 'Telefone deve ter pelo menos 7 dígitos'),
+  email_cliente: z.string().email('Email inválido').optional().or(z.literal('')),
+  quantidade_pessoas: z.number().int().min(1, 'Mínimo 1 pessoa').max(20, 'Máximo 20 pessoas'),
+  data_reserva: z.string().min(1, 'Data é obrigatória'),
   hora_reserva: z.string().regex(/^\d{2}:\d{2}$/, 'Hora deve estar no formato HH:mm'),
-  numero_pessoas: z.number().int().min(1, 'Mínimo 1 pessoa').max(20, 'Máximo 20 pessoas'),
-  observacoes: z.string().optional(),
-  nome_reserva: z.string().min(3).optional(),
-  telefone_reserva: z.string().min(7).optional(),
+  ocasiao_especial: z.string().optional().or(z.literal('')),
+  observacoes: z.string().optional().or(z.literal('')),
 });
 
 // ============ EXPORT TYPES ============

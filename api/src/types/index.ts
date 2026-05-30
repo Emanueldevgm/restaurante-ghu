@@ -1,4 +1,9 @@
-// Enums baseados no schema MySQL
+// =============================================
+// TIPOS DO SISTEMA RESTAURANTE GHU
+// =============================================
+
+// ============ ENUMS ============
+
 export type UserRole = 'cliente' | 'administrador' | 'garcom' | 'cozinha' | 'entregador' | 'gerente';
 export type UserStatus = 'ativo' | 'inativo' | 'bloqueado';
 export type Genero = 'masculino' | 'feminino' | 'outro';
@@ -33,7 +38,15 @@ export type StatusEntrega =
     | 'preparando' | 'saiu_entrega' | 'em_transito'
     | 'proximo_destino' | 'entregue' | 'falha_entrega';
 
-// Interfaces de Modelos
+// Status ativos de reserva (usados para verificação de conflito)
+export const ACTIVE_RESERVATION_STATUSES: StatusReserva[] = [
+    'pendente',
+    'confirmada',
+    'em_andamento',
+];
+
+// ============ INTERFACES DE MODELOS ============
+
 export interface Usuario {
     id: string;
     nome_completo: string;
@@ -172,9 +185,72 @@ export interface Reserva {
     confirmada_em: Date | null;
     check_in_em: Date | null;
     check_out_em: Date | null;
+    // Campos de JOIN (opcionais)
+    mesa_numero?: string | null;
+    mesa_capacidade?: number | null;
+    usuario_nome?: string | null;
 }
 
-// DTOs para Requests
+export interface Pagamento {
+    id: string;
+    pedido_id: string;
+    metodo: MetodoPagamento;
+    status: StatusPagamento;
+    valor_pago_kz: number;
+    referencia_transacao: string | null;
+    comprovativo_url: string | null;
+    created_at: Date;
+    updated_at: Date;
+}
+
+export interface Avaliacao {
+    id: string;
+    pedido_id: string;
+    usuario_id: string;
+    nota: number;
+    comentario: string | null;
+    created_at: Date;
+}
+
+export interface Cupom {
+    id: string;
+    codigo: string;
+    tipo: 'percentual' | 'fixo';
+    valor: number;
+    valor_minimo_pedido_kz: number;
+    quantidade_disponivel: number | null;
+    quantidade_usada: number;
+    data_inicio: Date;
+    data_fim: Date;
+    status: 'ativo' | 'inativo';
+    created_at: Date;
+}
+
+export interface ZonaEntrega {
+    id: string;
+    nome: string;
+    provincia: string;
+    municipios: string[] | null;
+    bairros: string[] | null;
+    taxa_entrega_kz: number;
+    tempo_estimado_min: number | null;
+    ativa: boolean;
+    created_at: Date;
+}
+
+export interface ConfiguracaoRestaurante {
+    id: number;
+    nome_restaurante: string;
+    taxa_entrega_base_kz: number;
+    tempo_preparo_padrao_min: number;
+    pedido_minimo_delivery_kz: number;
+    aberto: boolean;
+    horario_funcionamento: Record<string, unknown> | null;
+    updated_at: Date;
+}
+
+// ============ DTOs PARA REQUESTS ============
+
 export interface RegisterDTO {
     nome_completo: string;
     email?: string;
@@ -266,7 +342,20 @@ export interface CreateReservaDTO {
     observacoes?: string;
 }
 
-// Response types
+// ============ RESPONSE TYPES ============
+
+export interface ApiResponse<T = unknown> {
+    success: boolean;
+    message?: string;
+    data?: T;
+    pagination?: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
 export interface AuthResponse {
     success: boolean;
     message: string;
@@ -289,14 +378,53 @@ export interface AuthResponse {
     };
 }
 
-export interface ApiResponse<T = any> {
-    success: boolean;
-    message?: string;
-    data?: T;
-    pagination?: {
-        page: number;
-        limit: number;
-        total: number;
-        totalPages: number;
-    };
+// ============ REQUEST COM USER (EXPRESS) ============
+
+export interface AuthenticatedUser {
+    userId: string;
+    role: UserRole;
+    email?: string;
+    telefone?: string;
+    nome_completo?: string;
+}
+
+// ============ PAGINATION ============
+
+export interface PaginationParams {
+    page: number;
+    limit: number;
+}
+
+export interface PaginationResult {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+}
+
+// ============ FILTERS ============
+
+export interface ReservationFilters {
+    status?: StatusReserva;
+    data?: string;
+    mesa_id?: string;
+    data_inicial?: string;
+    data_final?: string;
+}
+
+export interface OrderFilters {
+    status?: StatusPedido;
+    tipo?: TipoPedido;
+    data_inicio?: string;
+    data_fim?: string;
+    search?: string;
+}
+
+export interface MenuFilters {
+    categoria_id?: string;
+    destaque?: boolean;
+    prato_do_dia?: boolean;
+    vegetariano?: boolean;
+    search?: string;
+    limit?: number;
 }

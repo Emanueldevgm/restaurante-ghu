@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import env from './config/env.config';
+import { corsOptions } from './config/cors';
 import { errorMiddleware } from './middleware/error.middleware';
 import { logger } from './middleware/logger.middleware';
 import path from 'path';
@@ -19,19 +20,27 @@ import reviewRoutes from './routes/review.routes';
 
 const app: Application = express();
 
-// ============ CORS ============
-app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-}));
+// ============ CORS (usando corsOptions do cors.ts) ============
+app.use(cors(corsOptions));
 
 // ============ MIDDLEWARES ============
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 app.use(logger);
+
+// ============ ARQUIVOS ESTÁTICOS (para desenvolvimento local) ============
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), {
+    index: false,
+    dotfiles: 'allow',
+    setHeaders: (res) => {
+        res.set('Cache-Control', 'public, max-age=86400');
+        res.set('Access-Control-Allow-Origin', '*');
+        res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+}));
 
 // ============ ROTA DE SAÚDE ============
 app.get('/health', (_req: Request, res: Response) => {

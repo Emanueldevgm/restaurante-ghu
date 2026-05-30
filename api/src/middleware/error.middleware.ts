@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable comma-dangle */
 import { Request, Response, NextFunction } from 'express';
 import env from '../config/env.config';
 

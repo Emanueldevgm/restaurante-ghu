@@ -10,8 +10,7 @@ import {
 import { BadRequestError, NotFoundError } from '../middleware/error.middleware';
 import { v4 as uuidv4 } from 'uuid';
 import Logger from '../utils/logger.util';
-import path from 'path';
-import fs from 'fs';
+import { deleteCloudinaryImage } from '../config/cloudinary';
 
 function formatMenuItem(item: any) {
   return {
@@ -174,21 +173,17 @@ export class MenuController {
 
   static async createMenuItem(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const normalizeImagePath = (imagePath: string | null | undefined): string | null => {
-        if (!imagePath) return null;
-        if (typeof imagePath !== 'string') return null;
-        if (imagePath === 'null' || imagePath.trim() === '') return null;
-        return imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
-      };
-
+      // 🔑 CLOUDINARY: Imagem enviada via upload (URL completa) ou URL manual
       let imagem: string | null = null;
       if (req.file) {
-        imagem = `/uploads/menu/${req.file.filename}`;
-      } else {
-        imagem = normalizeImagePath(req.body.imagem);
+        // Upload via Cloudinary — a propriedade 'path' já contém a URL completa
+        imagem = (req.file as any).path || (req.file as any).secure_url || null;
+      } else if (req.body.imagem && req.body.imagem !== 'null' && req.body.imagem !== '') {
+        // URL manual (ex: URL externa já completa)
+        imagem = req.body.imagem;
       }
 
-      // Preparar dados para validação, removendo o campo 'imagem' original se for objeto
+      // Preparar dados para validação
       const rawData: any = {
         categoria_id: req.body.categoria_id,
         nome: req.body.nome,
@@ -204,7 +199,7 @@ export class MenuController {
         destaque: req.body.destaque === 'true' || req.body.destaque === true,
         prato_do_dia: req.body.prato_do_dia === 'true' || req.body.prato_do_dia === true,
         ordem_exibicao: req.body.ordem_exibicao,
-        imagem: imagem, // agora é string ou null
+        imagem: imagem,
       };
 
       const validatedData = CreateItemCardapioDTOSchema.parse(rawData);
@@ -264,29 +259,29 @@ export class MenuController {
       const items = await query<any[]>('SELECT * FROM itens_cardapio WHERE id = $1', [id]);
       if (items.length === 0) throw new NotFoundError('Item do cardápio');
 
-      // Determinar novo caminho da imagem
+      // 🔑 CLOUDINARY: Determinar novo caminho da imagem
       let imagem: string | null | undefined = undefined;
       if (req.file) {
-        imagem = `/uploads/menu/${req.file.filename}`;
-        // Deletar imagem antiga se existir
-        if (items[0].imagem) {
-          const normalizedOldPath = items[0].imagem.startsWith('/') ? items[0].imagem.slice(1) : items[0].imagem;
-          const oldPath = path.join(__dirname, '..', '..', normalizedOldPath);
-          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        // Upload via Cloudinary — URL completa
+        imagem = (req.file as any).path || (req.file as any).secure_url || null;
+        // Deletar imagem antiga do Cloudinary se existir
+        if (items[0].imagem && items[0].imagem.includes('cloudinary')) {
+          await deleteCloudinaryImage(items[0].imagem);
         }
       } else if (req.body.imagem !== undefined) {
         if (req.body.imagem === null || req.body.imagem === 'null' || req.body.imagem === '') {
-          imagem = null;
-          if (items[0].imagem) {
-            const oldPath = path.join(__dirname, '..', '..', items[0].imagem.replace(/^\/+/, ''));
-            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+          // Remover imagem
+          if (items[0].imagem && items[0].imagem.includes('cloudinary')) {
+            await deleteCloudinaryImage(items[0].imagem);
           }
+          imagem = null;
         } else if (typeof req.body.imagem === 'string') {
-          imagem = req.body.imagem.startsWith('/') ? req.body.imagem : `/${req.body.imagem}`;
+          // Manter URL existente ou nova URL manual
+          imagem = req.body.imagem;
         }
       }
 
-      // Preparar dados brutos (sem o campo imagem problemático)
+      // Preparar dados brutos
       const rawData: any = {};
       const campos = [
         'categoria_id', 'nome', 'nome_en', 'descricao', 'preco_kz',
@@ -353,11 +348,12 @@ export class MenuController {
       const { id } = req.params;
       const items = await query<any[]>('SELECT * FROM itens_cardapio WHERE id = $1', [id]);
       if (items.length === 0) throw new NotFoundError('Item do cardápio');
-      if (items[0].imagem) {
-        const normalizedPath = items[0].imagem.startsWith('/') ? items[0].imagem.slice(1) : items[0].imagem;
-        const filePath = path.join(__dirname, '..', '..', normalizedPath);
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+      // 🔑 CLOUDINARY: Deletar imagem do Cloudinary se existir
+      if (items[0].imagem && items[0].imagem.includes('cloudinary')) {
+        await deleteCloudinaryImage(items[0].imagem);
       }
+
       await query('DELETE FROM itens_cardapio WHERE id = $1', [id]);
       Logger.info(`Item deletado: ${id} por ${(req as any).user?.userId}`);
       res.json({ success: true, message: 'Item deletado com sucesso' });
