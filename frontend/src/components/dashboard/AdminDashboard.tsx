@@ -716,22 +716,238 @@ export function AdminDashboard() {
           </TabsContent>
 
           {/* ============ ANALYTICS TAB ============ */}
-          <TabsContent value="analytics" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card><CardContent className="p-6"><div className="flex items-start justify-between gap-3 w-full"><div className="min-w-0 flex-1"><p className="text-sm text-gray-600 mb-1">Receita Total</p><p className="text-[clamp(1.1rem,2.4vw,1.5rem)] font-bold text-green-600 leading-tight tabular-nums break-words">{orders.reduce((sum: number, order: any) => sum + orderTotal(order), 0).toLocaleString()} Kz</p></div><DollarSign className="h-8 w-8 text-green-600 shrink-0" /></div></CardContent></Card>
-              <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 mb-1">Pedidos Totais</p><p className="text-2xl font-bold text-blue-600">{orders.length}</p></div><Package className="h-8 w-8 text-blue-600" /></div></CardContent></Card>
-              <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 mb-1">Mesas Ocupadas</p><p className="text-2xl font-bold text-orange-600">{tables.filter((t: any) => t.status === 'occupied').length}/{tables.length}</p></div><Table2 className="h-8 w-8 text-orange-600" /></div></CardContent></Card>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card><CardHeader><CardTitle className="text-lg flex items-center gap-2"><BarChart3 className="h-5 w-5" /> Receita Mensal (Kz)</CardTitle></CardHeader><CardContent>{monthlyRevenue.length > 0 ? <ChartContainer config={{}} className="h-[300px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={monthlyRevenue}><XAxis dataKey="month" /><YAxis /><ChartTooltip content={<ChartTooltipContent />} /><Bar dataKey="receita" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></ChartContainer> : <div className="h-[300px] flex items-center justify-center text-gray-500"><BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" /><p>Nenhum dado disponível</p></div>}</CardContent></Card>
-              <Card><CardHeader><CardTitle className="text-lg flex items-center gap-2"><PieChartIcon className="h-5 w-5" /> Pedidos por Categoria</CardTitle></CardHeader><CardContent>{orderCategories.length > 0 ? <ChartContainer config={{}} className="h-[300px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={orderCategories} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}>{orderCategories.map((_entry: any, index: number) => (<Cell key={`cell-${index}`} fill={`hsl(${(index * 60) % 360}, 70%, 50%)`} />))}</Pie><ChartTooltip content={<ChartTooltipContent />} /></PieChart></ResponsiveContainer></ChartContainer> : <div className="h-[300px] flex items-center justify-center text-gray-500"><PieChartIcon className="h-12 w-12 mx-auto mb-4 opacity-50" /><p>Nenhum dado disponível</p></div>}</CardContent></Card>
-            </div>
-            <Card><CardHeader><CardTitle className="text-lg flex items-center gap-2"><TrendingUp className="h-5 w-5" /> Receita por Dia da Semana</CardTitle></CardHeader><CardContent>{weeklyRevenue.length > 0 ? <ChartContainer config={{}} className="h-[250px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={weeklyRevenue}><XAxis dataKey="dia" /><YAxis /><ChartTooltip content={<ChartTooltipContent />} /><Area type="monotone" dataKey="receita" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} /></AreaChart></ResponsiveContainer></ChartContainer> : <div className="h-[250px] flex items-center justify-center text-gray-500"><TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" /><p>Nenhum dado disponível</p></div>}</CardContent></Card>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card><CardHeader><CardTitle className="text-lg flex items-center gap-2"><BarChart3 className="h-5 w-5" /> Pedidos por Hora</CardTitle></CardHeader><CardContent>{hourlyOrders.length > 0 ? <ChartContainer config={{}} className="h-[250px]"><ResponsiveContainer width="100%" height="100%"><ComposedChart data={hourlyOrders}><XAxis dataKey="hora" /><YAxis /><ChartTooltip content={<ChartTooltipContent />} /><Bar dataKey="pedidos" fill="hsl(var(--primary))" /><Line type="monotone" dataKey="receita" stroke="hsl(var(--accent))" strokeWidth={2} /></ComposedChart></ResponsiveContainer></ChartContainer> : <div className="h-[250px] flex items-center justify-center text-gray-500"><BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" /><p>Nenhum dado disponível</p></div>}</CardContent></Card>
-              <Card><CardHeader><CardTitle className="text-lg flex items-center gap-2"><Users className="h-5 w-5" /> Satisfação dos Clientes</CardTitle></CardHeader><CardContent>{customerSatisfaction.length > 0 ? <ChartContainer config={{}} className="h-[250px]"><ResponsiveContainer width="100%" height="100%"><RadarChart data={customerSatisfaction}><PolarGrid /><PolarAngleAxis dataKey="subject" /><PolarRadiusAxis angle={90} domain={[0, 5]} /><Radar name="Avaliação" dataKey="A" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} /></RadarChart></ResponsiveContainer></ChartContainer> : <div className="h-[250px] flex items-center justify-center text-gray-500"><Users className="h-12 w-12 mx-auto mb-4 opacity-50" /><p>Nenhum dado disponível</p></div>}</CardContent></Card>
-            </div>
-          </TabsContent>
+{/* ============ ANALYTICS TAB ============ */}
+<TabsContent value="analytics" className="space-y-6">
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    {/* Receita Total */}
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between gap-3 w-full">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-gray-600 mb-1">Receita Total</p>
+            <p className="text-2xl font-bold text-green-600 leading-tight truncate">
+              {orders
+                .reduce((sum: number, order: any) => {
+                  const total = Number(order.total_kz) || Number(order.total) || 0;
+                  return sum + total;
+                }, 0)
+                .toLocaleString('pt-AO')} Kz
+            </p>
+          </div>
+          <DollarSign className="h-8 w-8 text-green-600 shrink-0" />
+        </div>
+      </CardContent>
+    </Card>
+
+    {/* Pedidos Totais */}
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-600 mb-1">Pedidos Totais</p>
+            <p className="text-2xl font-bold text-blue-600">{orders.length}</p>
+          </div>
+          <Package className="h-8 w-8 text-blue-600" />
+        </div>
+      </CardContent>
+    </Card>
+
+    {/* Mesas Ocupadas */}
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-600 mb-1">Mesas Ocupadas</p>
+            <p className="text-2xl font-bold text-orange-600">
+              {tables.filter((t: any) => t.status === 'occupied').length}/{tables.length}
+            </p>
+          </div>
+          <Table2 className="h-8 w-8 text-orange-600" />
+        </div>
+      </CardContent>
+    </Card>
+
+    {/* Ticket Médio */}
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-600 mb-1">Ticket Médio</p>
+            <p className="text-2xl font-bold text-purple-600">
+              {orders.length > 0
+                ? Math.round(
+                    orders.reduce((sum: number, order: any) => {
+                      const total = Number(order.total_kz) || Number(order.total) || 0;
+                      return sum + total;
+                    }, 0) / orders.length
+                  ).toLocaleString('pt-AO')
+                : 0} Kz
+            </p>
+          </div>
+          <TrendingUp className="h-8 w-8 text-purple-600" />
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+
+  {/* Receita Mensal + Pedidos por Categoria */}
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <BarChart3 className="h-5 w-5" /> Receita Mensal (Kz)
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {monthlyRevenue.length > 0 ? (
+          <ChartContainer config={{}} className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyRevenue}>
+                <XAxis dataKey="month" />
+                <YAxis />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="receita" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        ) : (
+          <div className="h-[300px] flex flex-col items-center justify-center text-gray-400">
+            <BarChart3 className="h-16 w-16 mb-4 opacity-30" />
+            <p className="text-sm font-medium">Nenhum dado disponível</p>
+            <p className="text-xs text-gray-400 mt-1">Os dados aparecerão após os primeiros pedidos</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <PieChartIcon className="h-5 w-5" /> Pedidos por Categoria
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {orderCategories.length > 0 ? (
+          <ChartContainer config={{}} className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={orderCategories}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  dataKey="value"
+                  label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {orderCategories.map((_entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={`hsl(${(index * 60) % 360}, 70%, 50%)`} />
+                  ))}
+                </Pie>
+                <ChartTooltip content={<ChartTooltipContent />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        ) : (
+          <div className="h-[300px] flex flex-col items-center justify-center text-gray-400">
+            <PieChartIcon className="h-16 w-16 mb-4 opacity-30" />
+            <p className="text-sm font-medium">Nenhum dado disponível</p>
+            <p className="text-xs text-gray-400 mt-1">Os dados aparecerão após os primeiros pedidos</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  </div>
+
+  {/* Receita por Dia da Semana */}
+  <Card>
+    <CardHeader>
+      <CardTitle className="text-lg flex items-center gap-2">
+        <TrendingUp className="h-5 w-5" /> Receita por Dia da Semana
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      {weeklyRevenue.length > 0 ? (
+        <ChartContainer config={{}} className="h-[250px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={weeklyRevenue}>
+              <XAxis dataKey="dia" />
+              <YAxis />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Area type="monotone" dataKey="receita" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </ChartContainer>
+      ) : (
+        <div className="h-[250px] flex flex-col items-center justify-center text-gray-400">
+          <TrendingUp className="h-16 w-16 mb-4 opacity-30" />
+          <p className="text-sm font-medium">Nenhum dado disponível</p>
+          <p className="text-xs text-gray-400 mt-1">Os dados aparecerão após os primeiros pedidos</p>
+        </div>
+      )}
+    </CardContent>
+  </Card>
+
+  {/* Pedidos por Hora + Satisfação */}
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <BarChart3 className="h-5 w-5" /> Pedidos por Hora
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {hourlyOrders.length > 0 ? (
+          <ChartContainer config={{}} className="h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={hourlyOrders}>
+                <XAxis dataKey="hora" />
+                <YAxis />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="pedidos" fill="hsl(var(--primary))" />
+                <Line type="monotone" dataKey="receita" stroke="hsl(var(--accent))" strokeWidth={2} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        ) : (
+          <div className="h-[250px] flex flex-col items-center justify-center text-gray-400">
+            <BarChart3 className="h-16 w-16 mb-4 opacity-30" />
+            <p className="text-sm font-medium">Nenhum dado disponível</p>
+            <p className="text-xs text-gray-400 mt-1">Os dados aparecerão após os primeiros pedidos</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Users className="h-5 w-5" /> Satisfação dos Clientes
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {customerSatisfaction.length > 0 ? (
+          <ChartContainer config={{}} className="h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={customerSatisfaction}>
+                <PolarGrid />
+                <PolarAngleAxis dataKey="subject" />
+                <PolarRadiusAxis angle={90} domain={[0, 5]} />
+                <Radar name="Avaliação" dataKey="A" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        ) : (
+          <div className="h-[250px] flex flex-col items-center justify-center text-gray-400">
+            <Users className="h-16 w-16 mb-4 opacity-30" />
+            <p className="text-sm font-medium">Nenhum dado disponível</p>
+            <p className="text-xs text-gray-400 mt-1">Os dados aparecerão após as primeiras avaliações</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  </div>
+</TabsContent>
 
           {/* ============ ACCESS TAB ============ */}
           <TabsContent value="access" className="space-y-6">
